@@ -1,0 +1,34 @@
+{
+  "general": {
+    "workflow_name": "{{{WORKFLOW_NAME}}}",
+    "pid": {{{PID}}},
+    "all_pids": {{{ALL_PIDS}}},
+    "data_path": "/data/",
+    "code_path": "/code/",
+    "delimiter": ",",
+    "use_floats": {{{USE_FLOATS}}}
+  },
+  "network": {
+    "parties":
+{{{PARTIES_CONFIG}}}
+  },
+  "jiff": {
+    "jiff_lib_path": "/dev/jiff/",
+    "server_ip": "{{{JIFF_SERVER_IP}}}",
+    "server_port": {{{JIFF_SERVER_PORT}}},
+    "zp": {{{ZP}}},
+    "extensions": {
+      "fixed_point": {
+        "use": {{{FP_USE}}},
+        "decimal_digits": {{{FP_DECIMAL}}},
+        "integer_digits": {{{FP_INTEGER}}}
+      },
+      "negative_number": {
+        "use": {{{NN_USE}}}
+      },
+      "big_number": {
+        "use": {{{BN_USE}}}
+      }
+    }
+  }
+}
