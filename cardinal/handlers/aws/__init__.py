@@ -12,5 +12,3 @@ class AwsHandler(Handler):
     def fetch_available_ip_address(self):
         return ""
 
-    def launch_pod(self, pod_spec: dict):
-        print("some boto3 code")

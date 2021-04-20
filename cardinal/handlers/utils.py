@@ -1,13 +1,19 @@
 from cardinal.handlers import *
 
 
-def resolve_handler(cloud_provider: str, app):
+def resolve_handler(infra: str, app):
 
-    if cloud_provider == "AWS":
-        return AwsHandler(app)
-    elif cloud_provider == "AZURE":
-        return AzureHandler(app)
-    elif cloud_provider == "GCP":
-        return GcpHandler(app)
+    if infra == "EC2":
+        return Ec2Handler(app)
+    elif infra == "EKS":
+        return EksHandler(app)
+    elif infra == "GCE":
+        return GceHandler(app)
+    elif infra == "GKE":
+        return GkeHandler(app)
+    elif infra == "AVM":
+        return AvmHandler(app)
+    elif infra == "AKS":
+        return AksHandler(app)
     else:
-        app.logger.error(f"Unrecognized cloud provider: {cloud_provider}")
+        app.logger.error(f"Unrecognized compute infrastructure: {infra}")

@@ -1,5 +1,3 @@
-
-
 class Handler:
     """
     Cloud provider API handler base class. Defines
@@ -7,14 +5,10 @@ class Handler:
     """
     def __init__(self, app):
         self.app = app
+        self.compute_client = None
+        self.storage_client = None
 
     def fetch_available_ip_address(self):
-        return ""
-
-    def launch_pod(self, pod_spec: dict):
-        return ""
-
-    def launch_service(self, service_spec: dict):
         return ""
 
     """
