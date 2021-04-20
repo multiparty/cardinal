@@ -23,5 +23,14 @@ class Orchestrator:
             run the specified workflow with PID = workflow_config["PID"]
         """
 
+        """
+        note to self:
+        
+            - should actually first exchange IPs on the base class,
+            then launch_all() on the subclass. this would allow for
+            us to subclass the EC2/EKS variants with a single entrypoint
+            without everything getting messy
+        """
+
         self.compute_party.build_all()
         self.compute_party.launch_all()

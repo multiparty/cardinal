@@ -75,6 +75,13 @@ def submit():
 
 @app.route("/api/submit_ip_address", methods=["POST"])
 def submit_ip_address():
+    """
+    cardinal instances will use this endpoint to transmit the IP address
+    that they have selected for the compute pod they intend to launch for
+    a given workflow. once cardinal receives a message of this type, it
+    fetches the orchestrator from it's RUNNING_JOBS record, and updates
+    it's other_pod_ips record.
+    """
 
     if request.method == "POST":
         """
@@ -88,19 +95,27 @@ def submit_ip_address():
 
         req = request.get_json(force=True)
         if req["workflow_name"] in RUNNING_JOBS:
+            """
+            if this IP information is legitimate, fetch the corresponding 
+            orchestrator and update its other_pod_ips record
+            """
 
             app.logger.info(
                 f"Received IP address from cardinal server generating pod "
                 f"for party {req['from_pod']}"
             )
             orch = RUNNING_JOBS[req["workflow_name"]]
-            orch.compute_party.other_pod_ips[req["from_pod"]] = \
+            orch.compute_party.other_pod_ips[req["from_pod"]]["IP_PORT"] = \
                 f"{req['pod_ip_address']}:{9000 + int(req['from_pod'])}"
 
             response = {
                 "MSG": "OK"
             }
         else:
+            """
+            if the workflow_name doesn't resolve to a running orchestrator,
+            return an error message
+            """
 
             app.logger.error(
                 f"Receive IP address from cardinal server generating pod"

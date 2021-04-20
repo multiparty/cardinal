@@ -43,62 +43,89 @@ class ComputeParty:
         actually exchanged IP addresses yet.
         """
 
+        # self entry
         ret = {
-            int(self.workflow_config["PID"]): f"{self.compute_pod_ip}:{9000 + int(self.workflow_config['PID'])}"
+            int(self.workflow_config["PID"]): {
+                "IP_PORT": f"{self.compute_pod_ip}:{9000 + int(self.workflow_config['PID'])}",
+                "ACKED": True
+            }
         }
 
+        # entries for other compute parties
         for party in self.workflow_config["other_cardinals"]:
-            ret[int(party[0])] = None
+            ret[int(party[0])] = {
+                "IP_PORT": None,
+                "ACKED": False
+            }
 
         return ret
 
     def _check_ip_records(self):
         """
         Look at our record of other parties' compute pod IP addresses,
-        return False if any of them are None, and return True if all
-        are complete.
+        return PIDs of any parties whose entries are still incomplete.
         """
 
-        statuses = []
+        incomplete = []
         for other_party in self.other_pod_ips.keys():
-            statuses.append(self.other_pod_ips[other_party])
+            if not self.other_pod_ips[other_party]["IP_PORT"]:
+                incomplete.append(other_party)
 
-        return all(statuses)
+        return incomplete
+
+    def _check_ip_record_acks(self):
+
+        un_acked = []
+        for other_party in self.other_pod_ips.keys():
+            if not self.other_pod_ips[other_party]["ACKED"]:
+                un_acked.append(other_party)
+
+        return un_acked
 
     def _exchange_ips(self):
         """
-        Just a dumb little protocol that continuously sends the IP address
-        we fetched for the compute pod that will be generated to the other
-        cardinal servers until our own table is complete.
-
-        It would be much smarter to only send our fetched IP address to
-        servers that haven't yet replied saying that they received it,
-        and adding a GET API endpoint at wsgi.py that we could use to
-        ask for an IP address, and have this loop use that instead of
-        sending our own IP addresses. If this doesn't work right we can
-        switch to that.
+        iterates over entries in self.other_pod_ips, and terminates only when we
+        have both received all the other pod's IP addresses from the other cardinal
+        servers and those cardinal servers have received ours
         """
 
         all_ips_received = False
-        while not all_ips_received:
+        all_parties_acked = False
+        while not all_ips_received or not all_parties_acked:
 
             for other_party in self.workflow_config["other_cardinals"]:
 
-                req = {
-                    "workflow_name": self.workflow_config["workflow_name"],
-                    "from_pid": self.workflow_config["PID"],
-                    "pod_ip_address": self.compute_pod_ip
-                }
+                if not self.other_pod_ips[other_party]["ACKED"]:
+                    # if we haven't received a message from this party indicating
+                    # that they've received our pod IP information, then we send
+                    # them that information
+                    req = {
+                        "workflow_name": self.workflow_config["workflow_name"],
+                        "from_pid": self.workflow_config["PID"],
+                        "pod_ip_address": self.compute_pod_ip
+                    }
 
-                dest_server = other_party[1]
-                resp = requests.post(f"{dest_server}/submit_ip_address", json=req)
-                self.app.logger(f"Submitted IP address to {dest_server} and got response: \n{resp}")
+                    dest_server = other_party[1]
+                    resp = requests.post(f"{dest_server}/submit_ip_address", json=req).json()
+                    self.app.logger(f"Submitted IP address to {dest_server} and got response: \n{resp}")
 
-            if self._check_ip_records():
-                all_ips_received = True
+                    if resp["MSG"] == "OK":
+                        self.other_pod_ips[other_party]["ACKED"] = True
+
+            incomplete_parties = self._check_ip_records()
+            incomplete_acks = self._check_ip_record_acks()
+
+            if incomplete_parties:
+                self.app.logger(f"Waiting for IP information from the following parties: {incomplete_parties}")
             else:
-                self.app.logger.info("Waiting for IP addresses from some parties, trying again.")
-                time.sleep(10)
+                all_ips_received = True
+
+            if incomplete_acks:
+                self.app.logger(f"Waiting for IP acks from the following parties: {incomplete_acks}")
+            else:
+                all_parties_acked = True
+
+            time.sleep(10)
 
     def _build_all_pids_list(self):
 
@@ -126,7 +153,7 @@ class ComputeParty:
         Which is just the format that the congregation config file uses for IP addresses
         of the other compute parties.
         """
-        return [f"{k}:{self.other_pod_ips[k]}" for k in self.other_pod_ips.keys()]
+        return [f"{k}:{self.other_pod_ips[k]['IP_PORT']}" for k in self.other_pod_ips.keys()]
 
     def build_congregation_config(self):
         """
