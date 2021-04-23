@@ -16,9 +16,10 @@ class Party:
         self.workflow_config = workflow_config
         self.app = app
         self.handler = handler
-        self.templates_directory = f"{os.path.dirname(os.path.realpath(__file__))}/templates/"
+        self.templates_directory = f"{os.path.dirname(os.path.realpath(__file__))}/templates"
         self.specs = {}
         self.this_compute_ip = self.fetch_available_ip_address()
+        self.compute_pod_port = 9000 + int(self.workflow_config['PID'])
         self.other_compute_ips = self._initialize_other_ips()
 
     def run(self):
@@ -39,7 +40,7 @@ class Party:
         # self entry
         ret = {
             int(self.workflow_config["PID"]): {
-                "IP_PORT": f"{self.this_compute_ip}:{9000 + int(self.workflow_config['PID'])}",
+                "IP_PORT": f"{self.this_compute_ip}:{self.compute_pod_port}",
                 "ACKED": True
             }
         }
@@ -88,7 +89,7 @@ class Party:
 
             for other_party in self.workflow_config["other_cardinals"]:
 
-                if not self.other_compute_ips[other_party]["ACKED"]:
+                if not self.other_compute_ips[other_party[0]]["ACKED"]:
                     # if we haven't received a message from this party indicating
                     # that they've received our pod IP information, then we send
                     # them that information
@@ -99,22 +100,22 @@ class Party:
                     }
 
                     dest_server = other_party[1]
-                    resp = requests.post(f"{dest_server}/submit_ip_address", json=req).json()
-                    self.app.logger(f"Submitted IP address to {dest_server} and got response: \n{resp}")
+                    resp = requests.post(f"{dest_server}/api/submit_ip_address", json=req).json()
+                    self.app.logger.info(f"Submitted IP address to {dest_server} and got response: \n{resp}")
 
                     if resp["MSG"] == "OK":
-                        self.other_compute_ips[other_party]["ACKED"] = True
+                        self.other_compute_ips[other_party[0]]["ACKED"] = True
 
             incomplete_parties = self._check_ip_records()
             incomplete_acks = self._check_ip_record_acks()
 
             if incomplete_parties:
-                self.app.logger(f"Waiting for IP information from the following parties: {incomplete_parties}")
+                self.app.logger.info(f"Waiting for IP information from the following parties: {incomplete_parties}")
             else:
                 all_ips_received = True
 
             if incomplete_acks:
-                self.app.logger(f"Waiting for IP acks from the following parties: {incomplete_acks}")
+                self.app.logger.info(f"Waiting for IP acks from the following parties: {incomplete_acks}")
             else:
                 all_parties_acked = True
 

@@ -60,11 +60,11 @@ def submit():
         else:
 
             orch = Orchestrator(req, app)
-            orch.run()
-
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
             RUNNING_JOBS[req['workflow_name']] = orch
+
+            orch.run()
 
         response = {
             "ID": req["workflow_name"]
@@ -89,7 +89,7 @@ def submit_ip_address():
         {
             "workflow_name": "test-workflow",   # name of relevant workflow
             "from_pid": 2,                      # PID of pod that will be generated at source cardinal instance
-            "pod_ip_address: "xx.xx.xx.xx"      # IP address of pod being generated at source cardinal instance
+            "pod_ip_address": "xx.xx.xx.xx"      # IP address of pod being generated at source cardinal instance
         }
         """
 
@@ -102,11 +102,11 @@ def submit_ip_address():
 
             app.logger.info(
                 f"Received IP address from cardinal server generating pod "
-                f"for party {req['from_pod']}"
+                f"for party {req['from_pid']}"
             )
             orch = RUNNING_JOBS[req["workflow_name"]]
-            orch.party.other_compute_ips[req["from_pod"]]["IP_PORT"] = \
-                f"{req['pod_ip_address']}:{9000 + int(req['from_pod'])}"
+            orch.party.other_compute_ips[req["from_pid"]]["IP_PORT"] = \
+                f"{req['pod_ip_address']}:{9000 + int(req['from_pid'])}"
 
             response = {
                 "MSG": "OK"

@@ -1,3 +1,4 @@
+import os
 from cardinal.handlers import *
 
 
@@ -10,7 +11,9 @@ def resolve_handler(infra: str, app):
     elif infra == "GCE":
         return GceHandler(app)
     elif infra == "GKE":
-        return GkeHandler(app)
+        project = os.environ.get("PROJECT")
+        region = os.environ.get("REGION")
+        return GkeHandler(app, project, region)
     elif infra == "AVM":
         return AvmHandler(app)
     elif infra == "AKS":
