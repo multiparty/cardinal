@@ -5,7 +5,7 @@ from flask import request
 from flask import jsonify
 from flask_cors import CORS
 
-from cardinal.orchestrator import Orchestrator
+from cardinal import Orchestrator
 
 
 RUNNING_JOBS = dict()
