@@ -1,7 +1,7 @@
-from cardinal.handlers.azure import AzureHandler
+from cardinal.handlers.vm import VmHandler
 
 
-class AvmHandler(AzureHandler):
+class AvmHandler(VmHandler):
     def __init__(self, app):
         super(AvmHandler, self).__init__(app)
 

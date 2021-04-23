@@ -105,7 +105,7 @@ def submit_ip_address():
                 f"for party {req['from_pod']}"
             )
             orch = RUNNING_JOBS[req["workflow_name"]]
-            orch.compute_party.other_pod_ips[req["from_pod"]]["IP_PORT"] = \
+            orch.party.other_compute_ips[req["from_pod"]]["IP_PORT"] = \
                 f"{req['pod_ip_address']}:{9000 + int(req['from_pod'])}"
 
             response = {

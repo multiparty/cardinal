@@ -1,13 +1,26 @@
 import os
-from cardinal.compute_party import ComputeParty
 from cardinal.handlers.utils import resolve_handler
+from cardinal.party.kube_party import KubeParty
+from cardinal.party.vm_party import VmParty
 
 
 class Orchestrator:
     def __init__(self, workflow_config: dict, app):
         self.workflow_config = workflow_config
         self.app = app
-        self.compute_party = ComputeParty(workflow_config, app, self._resolve_handler())
+        self.party = self._resolve_party()
+
+    def _resolve_party(self):
+
+        infra = os.environ.get("CLOUD_PROVIDER")
+        if infra in {"EC2", "GCE", "AVM"}:
+            return VmParty(self.workflow_config, self.app, self._resolve_handler())
+        elif infra in {"EKS", "GKE", "AKS"}:
+            return KubeParty(self.workflow_config, self.app, self._resolve_handler())
+        else:
+            msg = f"Unrecognized compute infrastructure: {infra}"
+            self.app.logger.error(msg)
+            raise Exception(msg)
 
     def _resolve_handler(self):
         return resolve_handler(os.environ.get("CLOUD_PROVIDER"), self.app)
@@ -23,14 +36,4 @@ class Orchestrator:
             run the specified workflow with PID = workflow_config["PID"]
         """
 
-        """
-        note to self:
-        
-            - should actually first exchange IPs on the base class,
-            then launch_all() on the subclass. this would allow for
-            us to subclass the EC2/EKS variants with a single entrypoint
-            without everything getting messy
-        """
-
-        self.compute_party.build_all()
-        self.compute_party.launch_all()
+        self.party.run()

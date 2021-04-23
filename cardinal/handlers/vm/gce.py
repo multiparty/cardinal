@@ -1,7 +1,7 @@
-from cardinal.handlers.gcp import GcpHandler
+from cardinal.handlers.vm import VmHandler
 
 
-class GceHandler(GcpHandler):
+class GceHandler(VmHandler):
     def __init__(self, app):
         super(GceHandler, self).__init__(app)
 

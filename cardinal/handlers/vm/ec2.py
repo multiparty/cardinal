@@ -1,7 +1,7 @@
-from cardinal.handlers.aws import AwsHandler
+from cardinal.handlers.vm import VmHandler
 
 
-class Ec2Handler(AwsHandler):
+class Ec2Handler(VmHandler):
     def __init__(self, app):
         super(Ec2Handler, self).__init__(app)
 

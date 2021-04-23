@@ -1,7 +1,7 @@
-from cardinal.handlers.gcp import GcpHandler
+from cardinal.handlers.kube import KubeHandler
 
 
-class GkeHandler(GcpHandler):
+class GkeHandler(KubeHandler):
     def __init__(self, app):
         super(GkeHandler, self).__init__(app)
 

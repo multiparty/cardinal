@@ -1,7 +1,7 @@
-from cardinal.handlers.azure import AzureHandler
+from cardinal.handlers.kube import KubeHandler
 
 
-class AksHandler(AzureHandler):
+class AksHandler(KubeHandler):
     def __init__(self, app):
         super(AksHandler, self).__init__(app)
 
