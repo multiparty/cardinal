@@ -103,6 +103,7 @@ class KubeParty(Party):
         if self.specs.get("CONFIG_MAP") is None:
             self.app.logger.error("No config map spec defined.")
 
+        # k_config.load_kube_config()
         k_config.load_incluster_config()
         kube_client = k_client.CoreV1Api()
 
