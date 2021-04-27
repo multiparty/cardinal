@@ -7,7 +7,8 @@ def resolve_handler(infra: str, app):
     if infra == "EC2":
         return Ec2Handler(app)
     elif infra == "EKS":
-        return EksHandler(app)
+        region = os.environ.get("REGION")
+        return EksHandler(app, region)
     elif infra == "GCE":
         return GceHandler(app)
     elif infra == "GKE":
