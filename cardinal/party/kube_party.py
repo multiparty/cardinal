@@ -1,7 +1,9 @@
+import base64
 import pystache
 import yaml
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
+from pprint import pprint
 from kubernetes import client as k_client
 from kubernetes import config as k_config
 from kubernetes.client.rest import ApiException
@@ -19,7 +21,8 @@ class KubeParty(Party):
     def build_pod_spec(self):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
-            "CONFIGMAP_NAME": f"{self.spec_prefix}-pod",
+            "CONG_IMG_PATH": "nginx",
+            "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
         data_template = open(f"{self.templates_directory}/kube/pod.tmpl", 'r').read()
 
@@ -50,11 +53,12 @@ class KubeParty(Party):
                 These environment variables are also present on this machine (since we're making
                 API calls to aws/gcloud/azure), so we can just grab them from the environment.
         """
+        encoded = base64.b64encode(bytes(self.specs['CONGREGATION_CONFIG'], 'utf-8'))
         params = {
-            "POD_NAME": f"",
+            "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
             "WORKFLOW_NAME": self.workflow_config['workflow_name'],
-            "CONG_CONFIG": self.specs['CONGREGATION_CONFIG']
+            "CONG_CONFIG": encoded
         }
         data_template = open(f"{self.templates_directory}/kube/config_map.tmpl", 'r').read()
 
@@ -91,6 +95,7 @@ class KubeParty(Party):
         self._exchange_ips()
         self.build_congregation_config()
         self.build_config_map()
+        pprint(self.specs)
 
     def launch_all(self):
 
