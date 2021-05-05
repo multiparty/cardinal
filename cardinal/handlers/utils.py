@@ -18,6 +18,8 @@ def resolve_handler(infra: str, app):
     elif infra == "AVM":
         return AvmHandler(app)
     elif infra == "AKS":
-        return AksHandler(app)
+        sub_id = os.environ.get("SUB_ID")
+        resource_group_name = os.environ.get("RESOURCE_GROUP_NAME")
+        return AksHandler(app, sub_id, resource_group_name)
     else:
         app.logger.error(f"Unrecognized compute infrastructure: {infra}")
