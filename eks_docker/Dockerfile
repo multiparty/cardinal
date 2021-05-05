@@ -7,8 +7,7 @@ RUN pip install -r requirements.txt
 
 # fill out with appropriate information
 ENV PORT=5000
-ENV CLOUD_PROVIDER="GKE"
-ENV PROJECT="curia-test"
+ENV CLOUD_PROVIDER="EKS"
 ENV REGION="us-east-1"
 
 CMD ["python", "/cardinal/wsgi.py"]
