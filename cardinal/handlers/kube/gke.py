@@ -11,19 +11,33 @@ class GkeHandler(KubeHandler):
         self.service = discovery.build('compute', 'v1', credentials=self.credentials)
         self.project = project
         self.region = region
+        self.reserved_addresses = self.fetch_all_available_ip_addresses()
 
-    def fetch_available_ip_address(self):
+    def fetch_all_available_ip_addresses(self):
         request = self.service.addresses().list(project=self.project, region=self.region)
         reserved = []
         while request is not None:
             response = request.execute()
 
-            reserved = [item['address'] for item in response['items'] if item['status'] == 'RESERVED' and
+            reserved = [item for item in response['items'] if item['status'] == 'RESERVED' and
                         item['addressType'] == 'EXTERNAL']
 
             request = self.service.addresses().list_next(previous_request=request, previous_response=response)
 
-        if len(reserved) == 0:
+        return reserved
+
+    def fetch_available_ip_address(self):
+        for_congregation = [ip['address'] for ip in self.reserved_addresses if ip['description'] == "congregation"]
+
+        if len(for_congregation) == 0:
             return ''
 
-        return random.choice(reserved)
+        return random.choice(for_congregation)
+
+    def fetch_jiff_server_ip_address(self):
+        for_jiff = [ip['address'] for ip in self.reserved_addresses if ip['description'] == "jiff_server"]
+
+        if len(self.reserved_addresses) == 0:
+            return ''
+
+        return random.choice(for_jiff)

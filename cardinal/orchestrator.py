@@ -8,15 +8,16 @@ class Orchestrator:
     def __init__(self, workflow_config: dict, app):
         self.workflow_config = workflow_config
         self.app = app
+        self.handler = self._resolve_handler()
         self.party = self._resolve_party()
 
     def _resolve_party(self):
 
         infra = os.environ.get("CLOUD_PROVIDER")
         if infra in {"EC2", "GCE", "AVM"}:
-            return VmParty(self.workflow_config, self.app, self._resolve_handler())
+            return VmParty(self.workflow_config, self.app, self.handler)
         elif infra in {"EKS", "GKE", "AKS"}:
-            return KubeParty(self.workflow_config, self.app, self._resolve_handler())
+            return KubeParty(self.workflow_config, self.app, self.handler)
         else:
             msg = f"Unrecognized compute infrastructure: {infra}"
             self.app.logger.error(msg)
@@ -37,3 +38,9 @@ class Orchestrator:
         """
 
         self.party.run()
+
+    def start_jiff_server(self):
+        jiff_ip = self.handler.fetch_jiff_server_ip_address()
+        self.party.start_jiff_server(jiff_ip)
+        return jiff_ip
+

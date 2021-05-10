@@ -13,10 +13,37 @@ class KubeParty(Party):
     def __init__(self, workflow_config: dict, app, handler: KubeHandler):
         super(KubeParty, self).__init__(workflow_config, app, handler)
         self.spec_prefix = f"{self.workflow_config['workflow_name'].lower()}-{self.workflow_config['dataset_id'].lower()}-{self.workflow_config['PID']}"
+        # k_config.load_kube_config() # for local dev
+        k_config.load_incluster_config()
+        self.kube_client = k_client.CoreV1Api()
 
     def run(self):
         self.build_all()
         self.launch_all()
+
+    def start_jiff_server(self, service_ip):
+        pod, service = self.build_jiff_specs(service_ip)
+        self.launch_pod(pod)
+        self.launch_service(service)
+
+    def build_jiff_specs(self, service_ip):
+        pod_params = {
+            "JOB_ID": self.spec_prefix,
+        }
+        pod_template = open(f"{self.templates_directory}/kube/jiff_pod.tmpl", 'r').read()
+        pod_rendered = pystache.render(pod_template, pod_params)
+
+        service_params = {
+            "POD_NAME": "jiff-server",
+            "SERVICE_NAME": "jiff-server-service",
+            "SERVICE_IP": service_ip,
+            "SERVICE_PORT": 8080,
+            "NODE_PORT": 30010,
+        }
+        service_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
+        service_rendered = pystache.render(service_template, service_params)
+
+        return yaml.safe_load(pod_rendered), yaml.safe_load(service_rendered)
 
     def build_pod_spec(self):
         params = {
@@ -65,25 +92,25 @@ class KubeParty(Party):
         rendered = pystache.render(data_template, params)
         self.specs["CONFIG_MAP"] = rendered
 
-    def launch_pod(self, kube_client, pod_body):
+    def launch_pod(self, pod_body):
         try:
-            api_response = kube_client.create_namespaced_pod("default", body=pod_body, pretty='true')
+            api_response = self.kube_client.create_namespaced_pod("default", body=pod_body, pretty='true')
             self.app.logger.info("Pod created successfully with response: \n{}\n".format(api_response))
         except ApiException as e:
             self.app.logger.error("Error creating Pod: \n{}\n".format(e))
 
-    def launch_service(self, kube_client, service_body):
+    def launch_service(self, service_body):
         try:
             api_response = \
-                kube_client.create_namespaced_service("default", body=service_body, pretty='true')
+                self.kube_client.create_namespaced_service("default", body=service_body, pretty='true')
             self.app.logger.info("Service created successfully with response: \n{}\n".format(api_response))
         except ApiException as e:
             self.app.logger.error("Error creating Service: \n{}\n".format(e))
 
-    def launch_config_map(self, kube_client, config_map_body):
+    def launch_config_map(self, config_map_body):
         try:
             api_response = \
-                kube_client.create_namespaced_config_map("default", body=config_map_body, pretty='true')
+                self.kube_client.create_namespaced_config_map("default", body=config_map_body, pretty='true')
             self.app.logger.info("ConfigMap created successfully with response: \n{}\n".format(api_response))
         except ApiException as e:
             self.app.logger.error("Error creating ConfigMap: \n{}\n".format(e))
@@ -108,14 +135,10 @@ class KubeParty(Party):
         if self.specs.get("CONFIG_MAP") is None:
             self.app.logger.error("No config map spec defined.")
 
-        # k_config.load_kube_config()
-        k_config.load_incluster_config()
-        kube_client = k_client.CoreV1Api()
-
         config_map_body = yaml.safe_load(self.specs['CONFIG_MAP'])
         service_body = yaml.safe_load(self.specs['SERVICE'])
         pod_body = yaml.safe_load(self.specs['POD'])
 
-        self.launch_config_map(kube_client, config_map_body)
-        self.launch_service(kube_client, service_body)
-        self.launch_pod(kube_client, pod_body)
+        self.launch_config_map(config_map_body)
+        self.launch_service(service_body)
+        self.launch_pod(pod_body)

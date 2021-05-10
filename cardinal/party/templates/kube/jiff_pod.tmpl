@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jiff-server
+  labels:
+    app: jiff-server
+    job_id: {{JOB_ID}}
+spec:
+  containers:
+    - name: jiff-server
+      image: docker.io/hicsail/jiff-server:latest
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 8080
+          protocol: TCP

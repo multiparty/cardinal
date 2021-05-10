@@ -49,26 +49,55 @@ def submit():
         app.logger.info(f"Workflow submission received: {req}")
 
         if req["workflow_name"] in RUNNING_JOBS:
+            orch = RUNNING_JOBS[req["workflow_name"]]
+            orch.run()
 
-            msg = f"Workflow with name {req['workflow_name']} is already running."
+            response = {
+                "ID": req["workflow_name"]
+            }
+
+        else:
+            app.logger.error(
+                f"Receive workflow submission from chamberlain server "
+                f"for workflow {req['workflow_name']}, but this workflow "
+                f"isn't present in record of running workflows."
+            )
+            response = {
+                "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
+            }
+
+        return jsonify(response)
+
+
+@app.route("/api/start_jiff_server", methods=["POST"])
+def start_jiff_server():
+
+    if request.method == "POST":
+
+        req = request.get_json(force=True)
+        app.logger.info(f"JIFF server request received for workflow: {req['workflow_name']}")
+
+        if req["workflow_name"] in RUNNING_JOBS:
+
+            msg = f"Workflow with name {req['workflow_name']} already has a JIFF server."
             app.logger.error(msg)
             response = {
                 "MSG": msg
             }
 
-            return jsonify(response)
         else:
 
             orch = Orchestrator(req, app)
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
+            app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
             # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
             RUNNING_JOBS[req['workflow_name']] = orch
 
-            orch.run()
+            jiff_ip = orch.start_jiff_server()
 
-        response = {
-            "ID": req["workflow_name"]
-        }
+            response = {
+                "JIFF_SERVER_IP": jiff_ip
+            }
 
         return jsonify(response)
 
@@ -152,7 +181,7 @@ def workflow_complete():
         req = request.get_json(force=True)
         if req["workflow_name"] in RUNNING_JOBS:
 
-            del RUNNING_JOBS[req["WORKFLOW_NAME"]]
+            del RUNNING_JOBS[req["workflow_name"]]
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
                 "MSG": "OK"
