@@ -20,6 +20,7 @@ def resolve_handler(infra: str, app):
     elif infra == "AKS":
         sub_id = os.environ.get("SUB_ID")
         resource_group_name = os.environ.get("RESOURCE_GROUP_NAME")
-        return AksHandler(app, sub_id, resource_group_name)
+        location = os.environ.get("LOCATION")
+        return AksHandler(app, sub_id, resource_group_name, location)
     else:
         app.logger.error(f"Unrecognized compute infrastructure: {infra}")
