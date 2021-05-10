@@ -14,9 +14,27 @@ spec:
           protocol: TCP
         - containerPort: 5001
           protocol: TCP
+      env:
+        - name: INFRA
+          value: {{INFRA}}
+        - name: STORAGE_HANDLER_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: {{CONFIGMAP_NAME}}
+              key: curia_config_encoded
+        - name: SOURCE_BUCKET
+          value: {{SOURCE_BUCKET}}
+        - name: SOURCE_KEY
+          value: {{SOURCE_KEY}}
+        - name: WRITE_PATH
+          value: {{WRITE_PATH}}
+        - name: DESTINATION_BUCKET
+          value: {{DESTINATION_BUCKET}}
       volumeMounts:
         - name: data-volume
           mountPath: /data
+        - name: cong-config
+          mountPath: /config
   volumes:
     - name: data-volume
       emptyDir:  {}
@@ -28,3 +46,7 @@ spec:
             path: workflow
           - key: config_encoded
             path: config
+          - key: protocol_encoded
+            path: protocol
+          - key: curia_config_encoded
+            path: curia_config

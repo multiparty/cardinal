@@ -1,4 +1,5 @@
 import base64
+import json
 import pystache
 import yaml
 from cardinal.party import Party
@@ -48,7 +49,12 @@ class KubeParty(Party):
     def build_pod_spec(self):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
-            "CONG_IMG_PATH": "nginx",
+            "CONG_IMG_PATH": "docker.io/bengetch/congregation-jiff:latest",
+            "INFRA": "AWS",
+            "SOURCE_BUCKET": "cardinal-input",
+            "SOURCE_KEY": "party_one/data/inpt.csv",
+            "WRITE_PATH": "",
+            "DESTINATION_BUCKET": "",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
         data_template = open(f"{self.templates_directory}/kube/pod.tmpl", 'r').read()
@@ -80,12 +86,21 @@ class KubeParty(Party):
                 These environment variables are also present on this machine (since we're making
                 API calls to aws/gcloud/azure), so we can just grab them from the environment.
         """
-        encoded = base64.b64encode(bytes(self.specs['CONGREGATION_CONFIG'], 'utf-8'))
+        encoded_config = base64.b64encode(bytes(self.specs['CONGREGATION_CONFIG'], 'utf-8'))
+        # TODO: fill in the "FILL IN" values in creds dict with your credentials
+        aws_creds = {'AWS_REGION': 'us-east-1', 'AWS_ACCESS_KEY_ID': 'FILL IN',
+                     'AWS_SECRET_ACCESS_KEY': 'FILL IN '}
+        encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
+
+        protocol_tmpl = open(f"{self.templates_directory}/congregation/protocol.tmpl", 'r').read()
+        encoded_protocol = base64.b64encode(bytes(pystache.render(protocol_tmpl, {}), 'utf-8'))
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
             "WORKFLOW_NAME": self.workflow_config['workflow_name'],
-            "CONG_CONFIG": encoded
+            "PROTOCOL": encoded_protocol,
+            "CONG_CONFIG": encoded_config,
+            "CURIA_CONFIG": encoded_creds
         }
         data_template = open(f"{self.templates_directory}/kube/config_map.tmpl", 'r').read()
 
