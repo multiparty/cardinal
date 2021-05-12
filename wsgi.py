@@ -48,23 +48,45 @@ def submit():
         req = request.get_json(force=True)
         app.logger.info(f"Workflow submission received: {req}")
 
-        if req["workflow_name"] in RUNNING_JOBS:
-            orch = RUNNING_JOBS[req["workflow_name"]]
-            orch.run()
+        # party 1 should already have an orchestrator since they started the JIFF server
+        if req['PID'] == 1:
+            if req["workflow_name"] in RUNNING_JOBS:
+                orch = RUNNING_JOBS[req["workflow_name"]]
+                orch.run()
 
-            response = {
-                "ID": req["workflow_name"]
-            }
+                response = {
+                    "ID": req["workflow_name"]
+                }
 
+            else:
+                app.logger.error(
+                    f"Receive workflow submission from chamberlain server "
+                    f"for workflow {req['workflow_name']}, but this workflow "
+                    f"isn't present in record of running workflows."
+                )
+                response = {
+                    "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
+                }
+        # all other parties need to make a new orchestrator
         else:
-            app.logger.error(
-                f"Receive workflow submission from chamberlain server "
-                f"for workflow {req['workflow_name']}, but this workflow "
-                f"isn't present in record of running workflows."
-            )
-            response = {
-                "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
-            }
+            if req["workflow_name"] in RUNNING_JOBS:
+                msg = f"Workflow with name {req['workflow_name']} is already running."
+                app.logger.error(msg)
+                response = {
+                    "MSG": msg
+                }
+
+            else:
+                orch = Orchestrator(req, app)
+                app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
+                # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
+                RUNNING_JOBS[req['workflow_name']] = orch
+
+                orch.run()
+
+                response = {
+                    "ID": req["workflow_name"]
+                }
 
         return jsonify(response)
 
@@ -77,14 +99,22 @@ def start_jiff_server():
         req = request.get_json(force=True)
         app.logger.info(f"JIFF server request received for workflow: {req['workflow_name']}")
 
-        if req["workflow_name"] in RUNNING_JOBS:
+        # only party 1 should start a JIFF server
+        if req['PID'] != 1:
+            msg = f"Party {req['PID']} cannot start a JIFF server. Send request to party 1."
+            app.logger.error(msg)
+            response = {
+                "MSG": msg
+            }
+        # if it is party one, make sure they didn't already start a JIFF server
+        elif req["workflow_name"] in RUNNING_JOBS:
 
             msg = f"Workflow with name {req['workflow_name']} already has a JIFF server."
             app.logger.error(msg)
             response = {
                 "MSG": msg
             }
-
+        # if they didn't start a JIFF server, start a new one and respond with its IP
         else:
 
             orch = Orchestrator(req, app)
@@ -155,7 +185,7 @@ def submit_ip_address():
                 "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
             }
 
-        return response
+        return jsonify(response)
 
 
 @app.route("/api/workflow_complete", methods=["POST"])
