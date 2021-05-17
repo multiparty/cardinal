@@ -49,12 +49,13 @@ class KubeParty(Party):
     def build_pod_spec(self):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
-            "CONG_IMG_PATH": "docker.io/bengetch/congregation-jiff:latest",
+            "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
             "INFRA": "AWS",
+            "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
             "SOURCE_BUCKET": "cardinal-input",
             "SOURCE_KEY": "party_one/data/inpt.csv",
-            "WRITE_PATH": "",
-            "DESTINATION_BUCKET": "",
+            "WRITE_PATH": "/data/inpt.csv",
+            "DESTINATION_BUCKET": "cardinal-output",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
         data_template = open(f"{self.templates_directory}/kube/pod.tmpl", 'r').read()

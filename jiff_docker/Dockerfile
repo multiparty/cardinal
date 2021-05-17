@@ -11,6 +11,6 @@ ADD *.sh ./
 
 RUN ["git", "clone", "https://github.com/multiparty/jiff"]
 RUN ["bash", "install.sh"]
-CMD ["node", "jiff/demos/fixednegative-min/server.js"]
+CMD ["node", "jiff/demos/sum/server.js"]
 
 EXPOSE 8080

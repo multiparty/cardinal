@@ -24,7 +24,6 @@ def protocol():
 
 
 cfg = json.loads(open(sys.argv[1], "r").read())
-cfg["jiff"]["jiff_lib_path"] = sys.argv[2]
 
 # the Assemble class (at congregation/assemble/assemble.py) exposes
 # all the main steps related to workflow generation and dispatching

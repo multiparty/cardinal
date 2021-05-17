@@ -18,10 +18,7 @@ spec:
         - name: INFRA
           value: {{INFRA}}
         - name: STORAGE_HANDLER_CONFIG
-          valueFrom:
-            configMapKeyRef:
-              name: {{CONFIGMAP_NAME}}
-              key: curia_config_encoded
+          value: {{STORAGE_HANDLER_CONFIG}}
         - name: SOURCE_BUCKET
           value: {{SOURCE_BUCKET}}
         - name: SOURCE_KEY

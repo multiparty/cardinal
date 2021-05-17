@@ -1,3 +1,4 @@
+import json
 import pystache
 import os
 import requests
@@ -40,7 +41,7 @@ class Party:
         # self entry
         ret = {
             int(self.workflow_config["PID"]): {
-                "IP_PORT": f"{self.this_compute_ip}:{self.compute_pod_port}",
+                "IP_PORT": f"0.0.0.0:{self.compute_pod_port}",
                 "ACKED": True
             }
         }
@@ -127,7 +128,7 @@ class Party:
         for party in self.workflow_config["other_cardinals"]:
             ret.append(party[0])
 
-        return ret
+        return sorted(ret)
 
     def _build_parties_config(self):
         """
@@ -147,7 +148,7 @@ class Party:
         Which is just the format that the congregation config file uses for IP addresses
         of the other compute parties.
         """
-        return [f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()]
+        return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
 
     def build_congregation_config(self):
         """
@@ -188,16 +189,16 @@ class Party:
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": False,   # TODO - will eventually be configurable, hardcoded fine for now
+            "USE_FLOATS": "false",   # TODO - will eventually be configurable, hardcoded fine for now
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
             "ZP": 16777729,        # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_USE": False,       # TODO - will eventually be configurable, hardcoded fine for now
+            "FP_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
             "FP_DECIMAL": 1,       # TODO - will eventually be configurable, hardcoded fine for now
             "FP_INTEGER": 1,       # TODO - will eventually be configurable, hardcoded fine for now
-            "NN_USE": False,       # TODO - will eventually be configurable, hardcoded fine for now
-            "BN_USE": False        # TODO - will eventually be configurable, hardcoded fine for now
+            "NN_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
+            "BN_USE": "false"        # TODO - will eventually be configurable, hardcoded fine for now
         }
 
         rendered = pystache.render(template, data)
