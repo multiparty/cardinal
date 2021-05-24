@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import pystache
 import yaml
 from cardinal.party import Party
@@ -52,10 +53,10 @@ class KubeParty(Party):
             "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
             "INFRA": "AWS",
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
-            "SOURCE_BUCKET": "cardinal-input",
-            "SOURCE_KEY": "party_one/data/inpt.csv",
+            "SOURCE_BUCKET": os.environ.get("SOURCE_BUCKET"),
+            "SOURCE_KEY": os.environ.get("SOURCE_KEY"),
             "WRITE_PATH": "/data/inpt.csv",
-            "DESTINATION_BUCKET": "cardinal-output",
+            "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
         data_template = open(f"{self.templates_directory}/kube/pod.tmpl", 'r').read()
@@ -89,8 +90,8 @@ class KubeParty(Party):
         """
         encoded_config = base64.b64encode(bytes(self.specs['CONGREGATION_CONFIG'], 'utf-8'))
         # TODO: fill in the "FILL IN" values in creds dict with your credentials
-        aws_creds = {'AWS_REGION': 'us-east-1', 'AWS_ACCESS_KEY_ID': 'FILL IN',
-                     'AWS_SECRET_ACCESS_KEY': 'FILL IN '}
+        aws_creds = {'AWS_REGION': os.environ.get("AWS_REGION"), 'AWS_ACCESS_KEY_ID': os.environ.get("AWS_ACCESS_KEY_ID"),
+                     'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
         protocol_tmpl = open(f"{self.templates_directory}/congregation/protocol.tmpl", 'r').read()

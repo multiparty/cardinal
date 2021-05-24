@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cardinal
+  labels:
+    app: cardinal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cardinal
+  template:
+    metadata:
+      labels:
+        app: cardinal
+    spec:
+      containers:
+        - name: cardinal
+          image: #REPLACE with correct image path
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cardinal-service
+spec:
+  selector:
+    app: cardinal
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30000
