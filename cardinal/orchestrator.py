@@ -5,9 +5,10 @@ from cardinal.party.vm_party import VmParty
 
 
 class Orchestrator:
-    def __init__(self, workflow_config: dict, app):
+    def __init__(self, workflow_config: dict, app, num_workflows: int):
         self.workflow_config = workflow_config
         self.app = app
+        self.num_workflows = num_workflows
         self.handler = self._resolve_handler()
         self.party = self._resolve_party()
 
@@ -15,9 +16,9 @@ class Orchestrator:
 
         infra = os.environ.get("CLOUD_PROVIDER")
         if infra in {"EC2", "GCE", "AVM"}:
-            return VmParty(self.workflow_config, self.app, self.handler)
+            return VmParty(self.workflow_config, self.app, self.handler, self.num_workflows)
         elif infra in {"EKS", "GKE", "AKS"}:
-            return KubeParty(self.workflow_config, self.app, self.handler)
+            return KubeParty(self.workflow_config, self.app, self.handler, self.num_workflows)
         else:
             msg = f"Unrecognized compute infrastructure: {infra}"
             self.app.logger.error(msg)

@@ -77,7 +77,7 @@ def submit():
                 }
 
             else:
-                orch = Orchestrator(req, app)
+                orch = Orchestrator(req, app, len(RUNNING_JOBS.keys()))
                 app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
                 # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
                 RUNNING_JOBS[req['workflow_name']] = orch
@@ -117,7 +117,7 @@ def start_jiff_server():
         # if they didn't start a JIFF server, start a new one and respond with its IP
         else:
 
-            orch = Orchestrator(req, app)
+            orch = Orchestrator(req, app, len(RUNNING_JOBS.keys()))
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
             # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
@@ -165,7 +165,7 @@ def submit_ip_address():
             )
             orch = RUNNING_JOBS[req["workflow_name"]]
             orch.party.other_compute_ips[req["from_pid"]]["IP_PORT"] = \
-                f"{req['pod_ip_address']}:{9000 + int(req['from_pid'])}"
+                f"{req['pod_ip_address']}:9000"
 
             response = {
                 "MSG": "OK"

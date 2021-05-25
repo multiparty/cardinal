@@ -13,15 +13,16 @@ TODO:
 
 
 class Party:
-    def __init__(self, workflow_config: dict, app, handler: Handler):
+    def __init__(self, workflow_config: dict, app, handler: Handler, num_workflows: int):
         self.workflow_config = workflow_config
         self.app = app
         self.handler = handler
         self.templates_directory = f"{os.path.dirname(os.path.realpath(__file__))}/templates"
         self.specs = {}
         self.this_compute_ip = self.fetch_available_ip_address()
-        self.compute_pod_port = 9000 + int(self.workflow_config['PID'])
         self.other_compute_ips = self._initialize_other_ips()
+        self.compute_node_port = 30001 + num_workflows
+        self.jiff_node_port = 31000 + num_workflows
 
     def run(self):
         """
@@ -41,7 +42,7 @@ class Party:
         # self entry
         ret = {
             int(self.workflow_config["PID"]): {
-                "IP_PORT": f"0.0.0.0:{self.compute_pod_port}",
+                "IP_PORT": "0.0.0.0:9000",
                 "ACKED": True
             }
         }

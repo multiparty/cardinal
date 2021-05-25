@@ -5,15 +5,14 @@ import pystache
 import yaml
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
-from pprint import pprint
 from kubernetes import client as k_client
 from kubernetes import config as k_config
 from kubernetes.client.rest import ApiException
 
 
 class KubeParty(Party):
-    def __init__(self, workflow_config: dict, app, handler: KubeHandler):
-        super(KubeParty, self).__init__(workflow_config, app, handler)
+    def __init__(self, workflow_config: dict, app, handler: KubeHandler, num_workflows: int):
+        super(KubeParty, self).__init__(workflow_config, app, handler, num_workflows)
         self.spec_prefix = f"{self.workflow_config['workflow_name'].lower()}-{self.workflow_config['dataset_id'].lower()}-{self.workflow_config['PID']}"
         # k_config.load_kube_config() # for local dev
         k_config.load_incluster_config()
@@ -36,11 +35,11 @@ class KubeParty(Party):
         pod_rendered = pystache.render(pod_template, pod_params)
 
         service_params = {
-            "POD_NAME": "jiff-server",
-            "SERVICE_NAME": "jiff-server-service",
+            "POD_NAME": f"{self.spec_prefix}-jiff-server",
+            "SERVICE_NAME": f"{self.spec_prefix}-jiff-server-service",
             "SERVICE_IP": service_ip,
             "SERVICE_PORT": 8080,
-            "NODE_PORT": 30010,
+            "NODE_PORT": self.jiff_node_port,
         }
         service_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
         service_rendered = pystache.render(service_template, service_params)
@@ -69,8 +68,8 @@ class KubeParty(Party):
             "POD_NAME": f"{self.spec_prefix}-pod",
             "SERVICE_NAME": f"{self.spec_prefix}-service",
             "SERVICE_IP": self.this_compute_ip,
-            "SERVICE_PORT": self.compute_pod_port,
-            "NODE_PORT": 30000 + int(self.workflow_config['PID']),
+            "SERVICE_PORT": 9000,
+            "NODE_PORT": self.compute_node_port,
         }
         data_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
 
@@ -139,7 +138,6 @@ class KubeParty(Party):
         self._exchange_ips()
         self.build_congregation_config()
         self.build_config_map()
-        pprint(self.specs)
 
     def launch_all(self):
 
