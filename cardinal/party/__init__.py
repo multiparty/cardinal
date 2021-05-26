@@ -23,6 +23,7 @@ class Party:
         self.other_compute_ips = self._initialize_other_ips()
         self.compute_node_port = 30001 + num_workflows
         self.jiff_node_port = 31000 + num_workflows
+        self.running = True
 
     def run(self):
         """
@@ -87,7 +88,7 @@ class Party:
 
         all_ips_received = False
         all_parties_acked = False
-        while not all_ips_received or not all_parties_acked:
+        while self.running and (not all_ips_received or not all_parties_acked):
 
             for other_party in self.workflow_config["other_cardinals"]:
 
@@ -207,3 +208,9 @@ class Party:
 
     def fetch_available_ip_address(self):
         return self.handler.fetch_available_ip_address()
+
+    def stop_workflow(self):
+        """
+        Overridden in subclasses
+        """
+        pass

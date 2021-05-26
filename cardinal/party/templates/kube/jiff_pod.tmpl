@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: jiff-server
+  name: {{POD_NAME}}
   labels:
-    app: jiff-server
+    app: {{POD_NAME}}
     job_id: {{JOB_ID}}
 spec:
   containers:

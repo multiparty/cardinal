@@ -211,6 +211,7 @@ def workflow_complete():
         req = request.get_json(force=True)
         if req["workflow_name"] in RUNNING_JOBS:
 
+            RUNNING_JOBS[req["workflow_name"]].stop_workflow()
             del RUNNING_JOBS[req["workflow_name"]]
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {

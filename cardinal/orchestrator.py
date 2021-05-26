@@ -45,3 +45,5 @@ class Orchestrator:
         self.party.start_jiff_server(jiff_ip)
         return jiff_ip
 
+    def stop_workflow(self):
+        self.party.stop_workflow()

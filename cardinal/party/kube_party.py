@@ -29,6 +29,7 @@ class KubeParty(Party):
 
     def build_jiff_specs(self, service_ip):
         pod_params = {
+            "POD_NAME": f"{self.spec_prefix}-jiff-server",
             "JOB_ID": self.spec_prefix,
         }
         pod_template = open(f"{self.templates_directory}/kube/jiff_pod.tmpl", 'r').read()
@@ -157,3 +158,42 @@ class KubeParty(Party):
         self.launch_config_map(config_map_body)
         self.launch_service(service_body)
         self.launch_pod(pod_body)
+
+    def stop_workflow(self):
+        self.running = False  # to stop sending requests
+        try:
+            api_response = \
+                self.kube_client.delete_namespaced_config_map(f"{self.spec_prefix}-config-map", "default", pretty='true')
+            self.app.logger.info("ConfigMap deleted successfully with response: \n{}\n".format(api_response))
+        except ApiException as e:
+            self.app.logger.error("Error deleting ConfigMap: \n{}\n".format(e))
+
+        try:
+            api_response = \
+                self.kube_client.delete_namespaced_service(f"{self.spec_prefix}-service", "default", pretty='true')
+            self.app.logger.info("Service deleted successfully with response: \n{}\n".format(api_response))
+        except ApiException as e:
+            self.app.logger.error("Error deleting Service: \n{}\n".format(e))
+
+        try:
+            api_response = \
+                self.kube_client.delete_namespaced_pod(f"{self.spec_prefix}-pod", "default", pretty='true')
+            self.app.logger.info("Pod deleted successfully with response: \n{}\n".format(api_response))
+        except ApiException as e:
+            self.app.logger.error("Error deleting Pod: \n{}\n".format(e))
+
+        if self.workflow_config['PID'] == 1:
+            try:
+                api_response = \
+                    self.kube_client.delete_namespaced_service(f"{self.spec_prefix}-jiff-server-service", "default", pretty='true')
+                self.app.logger.info("JIFF Service deleted successfully with response: \n{}\n".format(api_response))
+            except ApiException as e:
+                self.app.logger.error("Error deleting JIFF Service: \n{}\n".format(e))
+
+            try:
+                api_response = \
+                    self.kube_client.delete_namespaced_pod(f"{self.spec_prefix}-jiff-server", "default", pretty='true')
+                self.app.logger.info("JIFF Pod deleted successfully with response: \n{}\n".format(api_response))
+            except ApiException as e:
+                self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
+
