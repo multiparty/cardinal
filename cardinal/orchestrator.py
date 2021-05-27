@@ -47,3 +47,6 @@ class Orchestrator:
 
     def stop_workflow(self):
         self.party.stop_workflow()
+
+    def update_jiff_server(self, jiff_server):
+        self.party.workflow_config['jiff_server'] = jiff_server

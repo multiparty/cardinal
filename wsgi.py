@@ -52,6 +52,7 @@ def submit():
         if req['PID'] == 1:
             if req["workflow_name"] in RUNNING_JOBS:
                 orch = RUNNING_JOBS[req["workflow_name"]]
+                orch.update_jiff_server(req['jiff_server'])
                 orch.run()
 
                 response = {
@@ -126,7 +127,7 @@ def start_jiff_server():
             jiff_ip = orch.start_jiff_server()
 
             response = {
-                "JIFF_SERVER_IP": jiff_ip
+                "JIFF_SERVER_IP": jiff_ip+":8080"
             }
 
         return jsonify(response)
