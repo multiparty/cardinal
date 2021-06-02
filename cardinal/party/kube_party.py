@@ -19,6 +19,7 @@ class KubeParty(Party):
         self.kube_client = k_client.CoreV1Api()
 
     def run(self):
+        self.build_and_launch_service()
         self.build_all()
         self.launch_all()
 
@@ -68,7 +69,7 @@ class KubeParty(Party):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "SERVICE_NAME": f"{self.spec_prefix}-service",
-            "SERVICE_IP": self.this_compute_ip,
+            # "SERVICE_IP": self.this_compute_ip,
             "SERVICE_PORT": 9000,
             "NODE_PORT": self.compute_node_port,
         }
@@ -121,6 +122,7 @@ class KubeParty(Party):
             api_response = \
                 self.kube_client.create_namespaced_service("default", body=service_body, pretty='true')
             self.app.logger.info("Service created successfully with response: \n{}\n".format(api_response))
+            self.this_compute_ip = api_response.get('IP_ADDRESS')
         except ApiException as e:
             self.app.logger.error("Error creating Service: \n{}\n".format(e))
 
@@ -132,9 +134,16 @@ class KubeParty(Party):
         except ApiException as e:
             self.app.logger.error("Error creating ConfigMap: \n{}\n".format(e))
 
-    def build_all(self):
-
+    def build_and_launch_service(self):
         self.build_service_spec()
+        if self.specs.get("SERVICE") is None:
+            self.app.logger.error("No service spec defined.")
+        service_body = yaml.safe_load(self.specs['SERVICE'])
+        self.launch_service(service_body)
+
+
+    def build_all(self):
+        # self.build_service_spec()
         self.build_pod_spec()
         self._exchange_ips()
         self.build_congregation_config()
@@ -145,18 +154,18 @@ class KubeParty(Party):
         if self.specs.get("POD") is None:
             self.app.logger.error("No pod spec defined.")
 
-        if self.specs.get("SERVICE") is None:
-            self.app.logger.error("No service spec defined.")
+        # if self.specs.get("SERVICE") is None:
+        #     self.app.logger.error("No service spec defined.")
 
         if self.specs.get("CONFIG_MAP") is None:
             self.app.logger.error("No config map spec defined.")
 
         config_map_body = yaml.safe_load(self.specs['CONFIG_MAP'])
-        service_body = yaml.safe_load(self.specs['SERVICE'])
+        # service_body = yaml.safe_load(self.specs['SERVICE'])
         pod_body = yaml.safe_load(self.specs['POD'])
 
         self.launch_config_map(config_map_body)
-        self.launch_service(service_body)
+        # self.launch_service(service_body)
         self.launch_pod(pod_body)
 
     def stop_workflow(self):
