@@ -130,7 +130,7 @@ class KubeParty(Party):
     def get_service_ip(self):
         try:
             api_response = \
-                self.kube_client.read_namespaced_service_status(f"{self.spec_prefix}-service", "default", pretty='true')
+                self.kube_client.read_namespaced_service(f"{self.spec_prefix}-service", "default", pretty='true')
             self.app.logger.info("Service read successfully with response:: \n{}\n".format(api_response))
         except ApiException as e:
             self.app.logger.error("Error reading Service: \n{}\n".format(e))
