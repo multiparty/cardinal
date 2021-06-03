@@ -143,6 +143,7 @@ class KubeParty(Party):
                 ip_address = api_response.status.load_balancer.ingress[0].hostname
             elapsed_time = time.time() - start_time
         self.this_compute_ip = ip_address
+        self.app.logger.error("Compute Ip Address: \n{}\n".format(ip_address))
 
     def launch_config_map(self, config_map_body):
         try:
