@@ -135,12 +135,11 @@ class KubeParty(Party):
             try:
                 api_response = \
                     self.kube_client.read_namespaced_service(f"{self.spec_prefix}-service", "default", pretty='true')
-                self.app.logger.info("Service read successfully with response:: \n{}\n",api_response)
+                self.app.logger.info("Service read successfully with response:: \n{}\n", api_response)
+                if api_response.status.load_balancer.ingress[0].hostname is not None:
+                    ip_address = api_response.status.load_balancer.ingress[0].hostname
             except ApiException as e:
                 self.app.logger.error("Error reading Service: \n{}\n".format(e))
-
-            if api_response.status.load_balancer.ingress[0].hostname != 'None':
-                ip_address = api_response.status.load_balancer.ingress[0].hostname
             elapsed_time = time.time() - start_time
         self.this_compute_ip = ip_address
         self.app.logger.error("Compute Ip Address: \n{}\n".format(ip_address))
