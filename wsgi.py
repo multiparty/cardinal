@@ -4,15 +4,17 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 from flask_cors import CORS
+from flask import g
 
 from cardinal import Orchestrator
 
 
-RUNNING_JOBS = dict()
+g.RUNNING_JOBS = dict()
 
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+
 
 
 @app.route("/", defaults={"path": ""})
@@ -50,8 +52,8 @@ def submit():
 
         # party 1 should already have an orchestrator since they started the JIFF server
         if req['PID'] == 1:
-            if req["workflow_name"] in RUNNING_JOBS:
-                orch = RUNNING_JOBS[req["workflow_name"]]
+            if req["workflow_name"] in g.get('RUNNING_JOBS'):
+                orch = g.get('RUNNING_JOBS')[req["workflow_name"]]
                 orch.update_jiff_server(req['jiff_server'])
                 orch.run()
 
@@ -70,7 +72,7 @@ def submit():
                 }
         # all other parties need to make a new orchestrator
         else:
-            if req["workflow_name"] in RUNNING_JOBS:
+            if req["workflow_name"] in g.get('RUNNING_JOBS'):
                 msg = f"Workflow with name {req['workflow_name']} is already running."
                 app.logger.error(msg)
                 response = {
@@ -78,10 +80,10 @@ def submit():
                 }
 
             else:
-                orch = Orchestrator(req, app, len(RUNNING_JOBS.keys()))
+                orch = Orchestrator(req, app, len(g.get('RUNNING_JOBS').keys()))
                 app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
                 # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
-                RUNNING_JOBS[req['workflow_name']] = orch
+                g.get('RUNNING_JOBS')[req['workflow_name']] = orch
 
                 orch.run()
 
@@ -108,7 +110,7 @@ def start_jiff_server():
                 "MSG": msg
             }
         # if it is party one, make sure they didn't already start a JIFF server
-        elif req["workflow_name"] in RUNNING_JOBS:
+        elif req["workflow_name"] in g.get('RUNNING_JOBS'):
 
             msg = f"Workflow with name {req['workflow_name']} already has a JIFF server."
             app.logger.error(msg)
@@ -118,11 +120,11 @@ def start_jiff_server():
         # if they didn't start a JIFF server, start a new one and respond with its IP
         else:
 
-            orch = Orchestrator(req, app, len(RUNNING_JOBS.keys()))
+            orch = Orchestrator(req, app, len(g.get('RUNNING_JOBS').keys()))
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
             # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
-            RUNNING_JOBS[req['workflow_name']] = orch
+            g.get('RUNNING_JOBS')[req['workflow_name']] = orch
 
             jiff_ip = orch.start_jiff_server()
 
@@ -154,7 +156,7 @@ def submit_ip_address():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in RUNNING_JOBS:
+        if req["workflow_name"] in g.get('RUNNING_JOBS'):
             """
             if this IP information is legitimate, fetch the corresponding 
             orchestrator and update its other_pod_ips record
@@ -164,7 +166,7 @@ def submit_ip_address():
                 f"Received IP address from cardinal server generating pod "
                 f"for party {req['from_pid']}"
             )
-            orch = RUNNING_JOBS[req["workflow_name"]]
+            orch = g.get('RUNNING_JOBS')[req["workflow_name"]]
             orch.party.other_compute_ips[req["from_pid"]]["IP_PORT"] = \
                 f"{req['pod_ip_address']}:9000"
 
@@ -210,10 +212,10 @@ def workflow_complete():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in RUNNING_JOBS:
+        if req["workflow_name"] in g.get('RUNNING_JOBS'):
 
-            RUNNING_JOBS[req["workflow_name"]].stop_workflow()
-            del RUNNING_JOBS[req["workflow_name"]]
+            g.get('RUNNING_JOBS')[req["workflow_name"]].stop_workflow()
+            del g.get('RUNNING_JOBS')[req["workflow_name"]]
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
                 "MSG": "OK"

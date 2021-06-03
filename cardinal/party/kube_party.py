@@ -120,19 +120,26 @@ class KubeParty(Party):
             self.app.logger.error("Error creating Pod: \n{}\n".format(e))
 
     def launch_service(self, service_body):
-        try:
-            api_response = \
-                self.kube_client.create_namespaced_service("default", body=service_body, pretty='true')
-            self.app.logger.info("Service created successfully with response: \n{}\n".format(api_response))
-        except ApiException as e:
-            self.app.logger.error("Error creating Service: \n{}\n".format(e))
+        retry = 0
+        while retry < 3:
+            try:
+                api_response = \
+                    self.kube_client.create_namespaced_service("default", body=service_body, pretty='true')
+                self.app.logger.info("Service created successfully with response: \n{}\n".format(api_response))
+                break
+            except ApiException as e:
+                self.app.logger.error("Error creating Service: \n{}\n".format(e))
+                time.sleep(30)
+            retry += 1
+
 
     def get_service_ip(self):
         ip_address = ""
         start_time = time.time()
         elapsed_time = 0
         infra = os.environ.get("CLOUD_PROVIDER")
-        while not ip_address and elapsed_time < 600:
+
+        while not ip_address and elapsed_time < 300:
             time.sleep(10)
             try:
                 api_response = \
