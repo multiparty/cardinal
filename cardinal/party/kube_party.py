@@ -133,10 +133,11 @@ class KubeParty(Party):
         elapsed_time = 0
         infra = os.environ.get("CLOUD_PROVIDER")
         while not ip_address and elapsed_time < 600:
+            time.sleep(10)
             try:
                 api_response = \
                     self.kube_client.read_namespaced_service(f"{self.spec_prefix}-service", "default", pretty='true')
-                self.app.logger.info("Service read successfully with response:", api_response)
+                self.app.logger.info("Service read successfully with response: \n{}\n".format(api_response))
                 if api_response.status.load_balancer.ingress is not None:
                     if infra in {"EKS"}:
                         ip_address = api_response.status.load_balancer.ingress[0].hostname
@@ -144,6 +145,7 @@ class KubeParty(Party):
                         ip_address = api_response.status.load_balancer.ingress[0].ip
             except ApiException as e:
                 self.app.logger.error("Error reading Service: \n{}\n".format(e))
+
             elapsed_time = time.time() - start_time
         if ip_address:
             self.this_compute_ip = ip_address
