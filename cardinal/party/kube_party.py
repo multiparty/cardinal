@@ -128,21 +128,25 @@ class KubeParty(Party):
             self.app.logger.error("Error creating Service: \n{}\n".format(e))
 
     def get_service_ip(self):
-        ip_address = ""
+        ip_address = None
         start_time = time.time()
         elapsed_time = 0
         while not ip_address and elapsed_time < 600:
             try:
                 api_response = \
                     self.kube_client.read_namespaced_service(f"{self.spec_prefix}-service", "default", pretty='true')
-                self.app.logger.info("Service read successfully with response:: \n{}\n", api_response)
-                if api_response.status.load_balancer.ingress[0].hostname is not None:
-                    ip_address = api_response.status.load_balancer.ingress[0].hostname
+                self.app.logger.info("Service read successfully with response:", api_response)
+                if api_response.status.load_balancer.ingress is not None:
+                    if api_response.status.load_balancer.ingress[0].hostname is not None:
+                        ip_address = api_response.status.load_balancer.ingress[0].hostname
             except ApiException as e:
                 self.app.logger.error("Error reading Service: \n{}\n".format(e))
             elapsed_time = time.time() - start_time
-        self.this_compute_ip = ip_address
-        self.app.logger.error("Compute Ip Address: \n{}\n".format(ip_address))
+        if ip_address is not None:
+            self.this_compute_ip = ip_address
+            self.app.logger.info("Compute ip address: ", ip_address)
+        else:
+            self.app.logger.error("Failed to get compute ip address")
 
     def launch_config_map(self, config_map_body):
         try:
