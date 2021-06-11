@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import pystache
+import time
 import yaml
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
@@ -19,15 +20,22 @@ class KubeParty(Party):
         self.kube_client = k_client.CoreV1Api()
 
     def run(self):
-        self.build_all()
+        self.prepare_all()
         self.launch_all()
 
-    def start_jiff_server(self, service_ip):
-        pod, service = self.build_jiff_specs(service_ip)
-        self.launch_pod(pod)
+    def start_jiff_server(self):
+        pod, service = self.build_jiff_specs()
         self.launch_service(service)
+        jiff_ip = ""
+        try:
+            jiff_ip = self._get_service_ip(f"{self.spec_prefix}-jiff-server-service")
+        except Exception as e:
+            self.app.logger.error("Failed to get JIFF IP address: \n{}\n".format(e))
 
-    def build_jiff_specs(self, service_ip):
+        self.launch_pod(pod)
+        return jiff_ip
+
+    def build_jiff_specs(self):
         pod_params = {
             "POD_NAME": f"{self.spec_prefix}-jiff-server",
             "JOB_ID": self.spec_prefix,
@@ -38,9 +46,7 @@ class KubeParty(Party):
         service_params = {
             "POD_NAME": f"{self.spec_prefix}-jiff-server",
             "SERVICE_NAME": f"{self.spec_prefix}-jiff-server-service",
-            "SERVICE_IP": service_ip,
             "SERVICE_PORT": 8080,
-            "NODE_PORT": self.jiff_node_port,
         }
         service_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
         service_rendered = pystache.render(service_template, service_params)
@@ -68,9 +74,7 @@ class KubeParty(Party):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "SERVICE_NAME": f"{self.spec_prefix}-service",
-            "SERVICE_IP": self.this_compute_ip,
             "SERVICE_PORT": 9000,
-            "NODE_PORT": self.compute_node_port,
         }
         data_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
 
@@ -109,6 +113,33 @@ class KubeParty(Party):
         rendered = pystache.render(data_template, params)
         self.specs["CONFIG_MAP"] = rendered
 
+    def _get_service_ip(self, service_name):
+        ip_address = ""
+        start_time = time.time()
+        elapsed_time = 0
+        infra = os.environ.get("CLOUD_PROVIDER")
+
+        while not ip_address and elapsed_time < 180:
+            time.sleep(5)
+            try:
+                api_response = \
+                    self.kube_client.read_namespaced_service_status(service_name, "default", pretty='true')
+                self.app.logger.info("Service status read successfully with response: \n{}\n".format(api_response))
+                if api_response.status.load_balancer.ingress is not None:
+                    if infra in {"EKS"}:
+                        ip_address = api_response.status.load_balancer.ingress[0].hostname
+                    else:
+                        ip_address = api_response.status.load_balancer.ingress[0].ip
+            except ApiException as e:
+                self.app.logger.error("Error reading Service status: \n{}\n".format(e))
+
+            elapsed_time = time.time() - start_time
+        if ip_address:
+            self.app.logger.info("Compute ip address: \n{}\n".format(ip_address))
+            return ip_address
+        else:
+            self.app.logger.error("Failed to get compute ip address")
+
     def launch_pod(self, pod_body):
         try:
             api_response = self.kube_client.create_namespaced_pod("default", body=pod_body, pretty='true')
@@ -132,11 +163,21 @@ class KubeParty(Party):
         except ApiException as e:
             self.app.logger.error("Error creating ConfigMap: \n{}\n".format(e))
 
-    def build_all(self):
+    def prepare_all(self):
 
         self.build_service_spec()
-        self.build_pod_spec()
+
+        if self.specs.get("SERVICE") is None:
+            self.app.logger.error("No service spec defined.")
+        service_body = yaml.safe_load(self.specs['SERVICE'])
+        self.launch_service(service_body)
+        try:
+            self.this_compute_ip = self._get_service_ip(f"{self.spec_prefix}-service")
+        except Exception as e:
+            self.app.logger.error("Failed to get compute ip address: \n{}\n".format(e))
+
         self._exchange_ips()
+        self.build_pod_spec()
         self.build_congregation_config()
         self.build_config_map()
 
@@ -145,18 +186,13 @@ class KubeParty(Party):
         if self.specs.get("POD") is None:
             self.app.logger.error("No pod spec defined.")
 
-        if self.specs.get("SERVICE") is None:
-            self.app.logger.error("No service spec defined.")
-
         if self.specs.get("CONFIG_MAP") is None:
             self.app.logger.error("No config map spec defined.")
 
         config_map_body = yaml.safe_load(self.specs['CONFIG_MAP'])
-        service_body = yaml.safe_load(self.specs['SERVICE'])
         pod_body = yaml.safe_load(self.specs['POD'])
 
         self.launch_config_map(config_map_body)
-        self.launch_service(service_body)
         self.launch_pod(pod_body)
 
     def stop_workflow(self):
