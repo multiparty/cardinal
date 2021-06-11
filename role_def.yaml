@@ -7,11 +7,8 @@ metadata:
     app: tools-rbac
 rules:
   - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "list", "create", "delete"]
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
-    resources: ["services"]
-    verbs: ["get", "list", "create", "delete"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "create", "delete"]
+    resources: ["pods/status", "services/status"]
+    verbs: ["get", "list", "watch"]
