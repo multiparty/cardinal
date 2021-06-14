@@ -122,7 +122,7 @@ class Party:
             else:
                 all_parties_acked = True
 
-            time.sleep(10)
+            time.sleep(1)
 
     def _build_all_pids_list(self):
 

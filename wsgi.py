@@ -230,6 +230,7 @@ def workflow_complete():
 
         return jsonify(response)
 
+
 @app.route("/api/status", methods=["POST"])
 def get_status():
     """
@@ -261,6 +262,7 @@ def get_status():
 
         return jsonify(response)
 
+
 if __name__ != "__main__":
 
     gunicorn_logger = logging.getLogger("gunicorn.error")
@@ -271,4 +273,4 @@ if __name__ != "__main__":
 if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 8080))
-    app.run(host="127.0.0.1", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=True)
