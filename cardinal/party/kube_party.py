@@ -259,3 +259,11 @@ class KubeParty(Party):
             except ApiException as e:
                 self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
 
+    def get_pod_status(self):
+        try:
+            api_response = self.kube_client.read_namespaced_pod_status(f"{self.spec_prefix}-pod", "default", pretty='true')
+            self.app.logger.info("Pod Status : \n{}\n".format(api_response.status.phase))
+            return api_response.status.phase
+        except ApiException as e:
+            self.app.logger.error("Error getting Pod status: \n{}\n".format(e))
+

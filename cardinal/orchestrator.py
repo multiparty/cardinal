@@ -49,3 +49,6 @@ class Orchestrator:
 
     def update_jiff_server(self, jiff_server):
         self.party.workflow_config['jiff_server'] = jiff_server
+
+    def get_pod_status(self):
+        return self.party.get_pod_status()
