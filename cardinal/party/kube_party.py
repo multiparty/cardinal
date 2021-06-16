@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import pystache
+import time
 import yaml
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
@@ -115,27 +116,55 @@ class KubeParty(Party):
 
     def _get_service_ip(self, service_name):
         ip_address = ""
+        start_time = time.time()
+        elapsed_time = 0
         infra = os.environ.get("CLOUD_PROVIDER")
 
-        w = watch.Watch()
-        try:
-            for event in w.stream(self.kube_client.list_namespaced_service, _request_timeout=60, namespace="default"):
-                self.app.logger.info(f"New Service Event: {event['type']}, {event['object'].metadata.name}")
-                if event['object'].metadata.name == service_name and event['type'] == 'MODIFIED':
-                    self.app.logger.info("Service IP assigned successfully")
+        while not ip_address and elapsed_time < 180:
+            time.sleep(5)
+            try:
+                api_response = \
+                    self.kube_client.read_namespaced_service_status(service_name, "default", pretty='true')
+                self.app.logger.info("Service status read successfully with response: \n{}\n".format(api_response))
+                if api_response.status.load_balancer.ingress is not None:
                     if infra in {"EKS"}:
-                        ip_address = event['object'].status.load_balancer.ingress[0].hostname
+                        ip_address = api_response.status.load_balancer.ingress[0].hostname
                     else:
-                        ip_address = event['object'].status.load_balancer.ingress[0].ip
-                    w.stop()
-        except ApiException as e:
-            self.app.logger.error("Error watching Service: \n{}\n".format(e))
+                        ip_address = api_response.status.load_balancer.ingress[0].ip
+            except ApiException as e:
+                self.app.logger.error("Error reading Service status: \n{}\n".format(e))
 
-        if ip_address != "":
+            elapsed_time = time.time() - start_time
+        if ip_address:
             self.app.logger.info("Compute ip address: \n{}\n".format(ip_address))
             return ip_address
         else:
             self.app.logger.error("Failed to get compute ip address")
+
+        # ip_address = ""
+        # infra = os.environ.get("CLOUD_PROVIDER")
+        #
+        # w = watch.Watch()
+        # try:
+        #     for event in w.stream(self.kube_client.list_namespaced_service, _request_timeout=60, namespace="default"):
+        #         e_obj = event
+        #         self.app.logger.info(f"Event object keys: {e_obj.keys()}")
+        #         self.app.logger.info(f"New Service Event: {e_obj['type']}, {e_obj['object'].metadata.name}")
+        #         if e_obj['object'].metadata.name == service_name and e_obj['type'] == 'MODIFIED':
+        #             self.app.logger.info("Service IP assigned successfully")
+        #             if infra in {"EKS"}:
+        #                 ip_address = e_obj['object'].status.load_balancer.ingress[0].hostname
+        #             else:
+        #                 ip_address = e_obj['object'].status.load_balancer.ingress[0].ip
+        #             w.stop()
+        # except ApiException as e:
+        #     self.app.logger.error("Error watching Service: \n{}\n".format(e))
+        #
+        # if ip_address != "":
+        #     self.app.logger.info("Compute ip address: \n{}\n".format(ip_address))
+        #     return ip_address
+        # else:
+        #     self.app.logger.error("Failed to get compute ip address")
 
     def launch_pod(self, pod_body):
         try:
