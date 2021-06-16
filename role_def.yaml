@@ -6,9 +6,9 @@ metadata:
   labels:
     app: tools-rbac
 rules:
-   - apiGroups: [""]
-    resources: ["pods","services","configmaps"]
-    verbs: ["get", "list", "create", "delete"]
   - apiGroups: [""]
-    resources: ["pods/status"]
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/status", "services/status"]
     verbs: ["get", "list", "watch"]

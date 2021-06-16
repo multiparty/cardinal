@@ -19,10 +19,8 @@ class Party:
         self.handler = handler
         self.templates_directory = f"{os.path.dirname(os.path.realpath(__file__))}/templates"
         self.specs = {}
-        self.this_compute_ip = self.fetch_available_ip_address()
+        self.this_compute_ip = ""
         self.other_compute_ips = self._initialize_other_ips()
-        self.compute_node_port = 30001 + num_workflows
-        self.jiff_node_port = 31000 + num_workflows
         self.running = True
 
     def run(self):
