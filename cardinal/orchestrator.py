@@ -1,4 +1,5 @@
 import os
+import time
 from cardinal.handlers.utils import resolve_handler
 from cardinal.party.kube_party import KubeParty
 from cardinal.party.vm_party import VmParty
@@ -49,3 +50,19 @@ class Orchestrator:
 
     def update_jiff_server(self, jiff_server):
         self.party.workflow_config['jiff_server'] = jiff_server
+
+    def add_event_dict(self,event_dict):
+        '''
+        funtion to add an event to the event timestamps list 
+        params:
+            event_dict: dict of format 
+            { 
+                'PID' : ... , 
+                'event' : "...." , 
+                'time': ... # time.time()
+            }
+        '''
+        self.party.add_event_dict(event_dict)
+
+    def get_timestamps(self):
+        return self.party.event_timestamps

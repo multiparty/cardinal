@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from flask import Flask
 from flask import request
 from flask import jsonify
@@ -213,10 +214,12 @@ def workflow_complete():
         if req["workflow_name"] in RUNNING_JOBS:
 
             RUNNING_JOBS[req["workflow_name"]].stop_workflow()
+            event_timestamps = RUNNING_JOBS[req["workflow_name"]].get_timestamps()
             del RUNNING_JOBS[req["workflow_name"]]
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
-                "MSG": "OK"
+                "MSG": "OK",
+                "timestamps": event_timestamps
             }
         else:
 

@@ -3,6 +3,7 @@ import json
 import os
 import pystache
 import yaml
+import datetime
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
 from kubernetes import client as k_client
@@ -23,6 +24,22 @@ class KubeParty(Party):
         self.prepare_all()
         self.launch_all()
 
+        w = watch.Watch()
+        try:
+            for event in w.stream(self.kube_client.list_namespaced_pod, _request_timeout=60, namespace="default"):
+                self.app.logger.info(f"New Pod Event: {event['type']}, {event['object'].metadata.name}")
+                if event['object'].metadata.name == f"{self.spec_prefix}-pod" and (event['type'].lower() == 'succeeded' or event['object'].status.phase.lower()=='succeeded'):
+                    
+                    self.app.logger.info("Pod Succeeded")
+                    self.add_event_dict({
+                        'PID': self.workflow_config['PID'],
+                        'event': 'Pod succeeded',
+                        'time': datetime.datetime.now()
+                    })
+                    w.stop()
+        except ApiException as e:
+            self.app.logger.error("Error watching Service: \n{}\n".format(e))
+
     def start_jiff_server(self):
         pod, service = self.build_jiff_specs()
         self.launch_service(service)
@@ -33,6 +50,11 @@ class KubeParty(Party):
             self.app.logger.error("Failed to get JIFF IP address: \n{}\n".format(e))
 
         self.launch_pod(pod)
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Jiff server launched',
+            'time': datetime.datetime.now()
+        })
         return jiff_ip
 
     def build_jiff_specs(self):
@@ -173,10 +195,29 @@ class KubeParty(Party):
         except Exception as e:
             self.app.logger.error("Failed to get compute ip address: \n{}\n".format(e))
 
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Got service ip',
+            'time': datetime.datetime.now()
+        })
+
         self._exchange_ips()
+
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Exchanged ips',
+            'time': datetime.datetime.now()
+        })
+
         self.build_pod_spec()
         self.build_congregation_config()
         self.build_config_map()
+
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Built specs and configs',
+            'time': datetime.datetime.now()
+        })
 
     def launch_all(self):
 
@@ -190,7 +231,17 @@ class KubeParty(Party):
         pod_body = yaml.safe_load(self.specs['POD'])
 
         self.launch_config_map(config_map_body)
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Launched config map',
+            'time': datetime.datetime.now()
+        })
         self.launch_pod(pod_body)
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Launched pod',
+            'time': datetime.datetime.now()
+        })
 
     def stop_workflow(self):
         self.running = False  # to stop sending requests
@@ -230,3 +281,8 @@ class KubeParty(Party):
             except ApiException as e:
                 self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
 
+        self.add_event_dict({
+            'PID': self.workflow_config['PID'],
+            'event': 'Worfkflow stopped',
+            'time': datetime.datetime.now()
+        })
