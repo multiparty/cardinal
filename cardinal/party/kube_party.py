@@ -143,7 +143,7 @@ class KubeParty(Party):
         try:
             for event in w.stream(self.kube_client.list_namespaced_service, _request_timeout=60, namespace="default"):
                 self.app.logger.info(f"New Service Event: {event['type']}, {event['object'].metadata.name}")
-                if event['object'].metadata.name == service_name and event['type'] == 'MODIFIED':
+                if event['object'].metadata.name == service_name and event['type'] == 'MODIFIED' and event['object'].status.load_balancer.ingress is not None:
                     self.app.logger.info("Service IP assigned successfully")
                     if infra in {"EKS"}:
                         ip_address = event['object'].status.load_balancer.ingress[0].hostname

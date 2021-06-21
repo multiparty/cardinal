@@ -2,9 +2,8 @@ import json
 import pystache
 import os
 import requests
-import datetime
-from cardinal.handlers.handler import Handler
 import time
+from cardinal.handlers.handler import Handler
 
 """
 TODO: 
@@ -22,7 +21,7 @@ class Party:
         self.this_compute_ip = ""
         self.other_compute_ips = self._initialize_other_ips()
         self.running = True
-        self.event_timestamps = [] # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
+        self.event_timestamps = []  # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
 
     def run(self):
         """
@@ -121,7 +120,7 @@ class Party:
             else:
                 all_parties_acked = True
 
-            time.sleep(10)
+            time.sleep(1)
 
     def _build_all_pids_list(self):
 
@@ -214,15 +213,15 @@ class Party:
         """
         pass
 
-    def add_event_dict(self,event_dict):
-        '''
-        funtion to add an event to the event timestamps list 
+    def add_event_dict(self, event_dict):
+        """
+        function to add an event to the event timestamps list
         params:
-            event_dict: dict of format 
-            { 
-                'PID' : ... , 
-                'event' : "...." , 
+            event_dict: dict of format
+            {
+                'PID' : ... ,
+                'event' : "...." ,
                 'time': ... # datetime.datetime.now()
             }
-        '''
+        """
         self.event_timestamps.append(event_dict)
