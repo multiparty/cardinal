@@ -5,18 +5,13 @@ from flask import request
 from flask import jsonify
 from flask_cors import CORS
 from flask import g
+from flaskext.mysql import MySQL
 
 from cardinal import Orchestrator
 
-
-
-
-
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-
-app.app_context().g.RUNNING_JOBS = dict()
-
+mysql = MySQL()
 
 
 @app.route("/", defaults={"path": ""})
@@ -34,9 +29,71 @@ def index():
     return "homepage"
 
 
+@app.route("/api/setup_db_conn", methods=["POST"])
+def setup_db_conn():
+    """
+    {
+        db_ip = "127.0.0.1"
+    }
+    """
+
+    infra = os.environ.get("CLOUD_PROVIDER")
+    if infra in {"EC2", "EKS"}:
+        msg = f"Unrecognized compute infrastructure: {infra}"
+        app.logger.error(msg)
+        raise Exception(msg)
+    elif infra in {"GCE", "GKE"}:
+        req = request.get_json(force=True)
+
+        app.logger.info(f"Workflow submission received: {req}")
+        app.config['MYSQL_DATABASE_USER'] = 'root'
+        app.config['MYSQL_DATABASE_PASSWORD'] = 'password'
+        app.config['MYSQL_DATABASE_DB'] = 'Cardinal'
+        app.config['MYSQL_DATABASE_HOST'] = req["db_ip"]
+
+    elif infra in ("AKS", "AVM"):
+        msg = f"Unrecognized compute infrastructure: {infra}"
+        app.logger.error(msg)
+        raise Exception(msg)
+
+    mysql.init_app(app)
+
+    conn = mysql.connect()
+    conn.autocommit(True)
+    cursor = conn.cursor()
+
+    cursor.execute("CREATE TABLE IF NOT EXISTS datasets( \
+      datasetId           VARCHAR(150) NOT NULL,\
+      endpoint            VARCHAR(150) NOT NULL,\
+      PID                 INT unsigned NOT Null,\
+      bigNumber           BOOL,\
+      decimalDigits       INT unsigned,\
+      integerDigits       INT unsigned,\
+      negativeNumber      BOOL,\
+      ZP                  BOOL,\
+      PRIMARY KEY     (datasetId)\
+    );")
+
+    cursor.execute("CREATE TABLE IF NOT EXISTS pods \
+                      datasetId           VARCHAR(150) NOT NULL,\
+                      PID                 INT unsigned NOT NULL,\
+                      ipAddr           VARCHAR(150) NOT NULL,\
+                      PRIMARY KEY         (datasetId)\
+                    );")
+
+    cursor.execute("CREATE TABLE IF NOT EXISTS jiff_servers( \
+                          datasetId           VARCHAR(150) NOT NULL,\
+                          ipAddr           VARCHAR(150) NOT NULL,\
+                          PRIMARY KEY         (datasetId)\
+                        );")
+
+    conn.close()
+
+    return
+
+
 @app.route("/api/submit", methods=["POST"])
 def submit():
-
     if request.method == "POST":
         """
         request looks like:
@@ -53,52 +110,57 @@ def submit():
         app.logger.info(f"Workflow submission received: {req}")
 
         # party 1 should already have an orchestrator since they started the JIFF server
-        if req['PID'] == 1:
-            if req["workflow_name"] in app.app_context().g.get('RUNNING_JOBS'):
-                orch = app.app_context().g.get('RUNNING_JOBS')[req["workflow_name"]]
-                orch.update_jiff_server(req['jiff_server'])
-                orch.run()
+        # if req['PID'] == 1:
+        if req["workflow_name"] in get_running_jobs():
+            orch = Orchestrator(req, app, len(get_running_jobs().keys()))
+            conn = mysql.connect()
+            conn.autocommit(True)
+            cursor = conn.cursor()
+            sql = "INSERT IGNORE INTO jiff_servers (datasetId, ipAddr ) VALUES ( %s, %s)"
+            val = (req["workflow_name"], req['jiff_server'])
+            cursor.execute(sql, val)
+            conn.close()
+            orch.run()
 
-                response = {
-                    "ID": req["workflow_name"]
-                }
+            response = {
+                "ID": req["workflow_name"]
+            }
 
-            else:
-                app.logger.error(
-                    f"Receive workflow submission from chamberlain server "
-                    f"for workflow {req['workflow_name']}, but this workflow "
-                    f"isn't present in record of running workflows."
-                )
-                response = {
-                    "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
-                }
-        # all other parties need to make a new orchestrator
         else:
-            if req["workflow_name"] in app.app_context().g.get('RUNNING_JOBS'):
-                msg = f"Workflow with name {req['workflow_name']} is already running."
-                app.logger.error(msg)
-                response = {
-                    "MSG": msg
-                }
+            app.logger.error(
+                f"Receive workflow submission from chamberlain server "
+                f"for workflow {req['workflow_name']}, but this workflow "
+                f"isn't present in record of running workflows."
+            )
+            response = {
+                "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
+            }
+    # # all other parties need to make a new orchestrator
+    # else:
+    #     if req["workflow_name"] in get_running_jobs():
+    #         msg = f"Workflow with name {req['workflow_name']} is already running."
+    #         app.logger.error(msg)
+    #         response = {
+    #             "MSG": msg
+    #         }
+    #
+    #     else:
+    #         orch = Orchestrator(req, app, len(get_running_jobs().keys()))
+    #         app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
+    #         # Add entry to get_running_jobs() so that we can access that orchestrator later on
+    #         get_running_jobs()[req['workflow_name']] = orch
+    #
+    #         orch.run()
+    #
+    #         response = {
+    #             "ID": req["workflow_name"]
+    #         }
 
-            else:
-                orch = Orchestrator(req, app, len(app.app_context().g.get('RUNNING_JOBS').keys()))
-                app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
-                # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
-                app.app_context().g.get('RUNNING_JOBS')[req['workflow_name']] = orch
-
-                orch.run()
-
-                response = {
-                    "ID": req["workflow_name"]
-                }
-
-        return jsonify(response)
+    return jsonify(response)
 
 
 @app.route("/api/start_jiff_server", methods=["POST"])
 def start_jiff_server():
-
     if request.method == "POST":
 
         req = request.get_json(force=True)
@@ -112,7 +174,7 @@ def start_jiff_server():
                 "MSG": msg
             }
         # if it is party one, make sure they didn't already start a JIFF server
-        elif req["workflow_name"] in app.app_context().g.get('RUNNING_JOBS'):
+        elif req["workflow_name"] in get_running_jobs():
 
             msg = f"Workflow with name {req['workflow_name']} already has a JIFF server."
             app.logger.error(msg)
@@ -122,16 +184,25 @@ def start_jiff_server():
         # if they didn't start a JIFF server, start a new one and respond with its IP
         else:
 
-            orch = Orchestrator(req, app, len(app.app_context().g.get('RUNNING_JOBS').keys()))
+            orch = Orchestrator(req, app, len(get_running_jobs().keys()))
+
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
-            # Add entry to RUNNING_JOBS so that we can access that orchestrator later on
-            app.app_context().g.get('RUNNING_JOBS')[req['workflow_name']] = orch
+            # Add entry to get_running_jobs() so that we can access that orchestrator later on
+            # get_running_jobs()[req['workflow_name']] = orch
 
             jiff_ip = orch.start_jiff_server()
 
+            conn = mysql.connect()
+            conn.autocommit(True)
+            cursor = conn.cursor()
+            sql = "INSERT INTO jiff_servers (datasetId, ipAddr ) VALUES (%s, %s, %s)"
+            val = (req["workflow_name"], req["from_pid"], f"{req['pod_ip_address']}:9000")
+            cursor.execute(sql, val)
+            conn.close()
+
             response = {
-                "JIFF_SERVER_IP": jiff_ip+":8080"
+                "JIFF_SERVER_IP": jiff_ip + ":8080"
             }
 
         return jsonify(response)
@@ -143,7 +214,7 @@ def submit_ip_address():
     cardinal instances will use this endpoint to transmit the IP address
     that they have selected for the compute pod they intend to launch for
     a given workflow. once cardinal receives a message of this type, it
-    fetches the orchestrator from it's RUNNING_JOBS record, and updates
+    fetches the orchestrator from it's get_running_jobs() record, and updates
     it's other_pod_ips record.
     """
 
@@ -158,7 +229,7 @@ def submit_ip_address():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in app.app_context().g.get('RUNNING_JOBS'):
+        if req["workflow_name"] in get_running_jobs():
             """
             if this IP information is legitimate, fetch the corresponding 
             orchestrator and update its other_pod_ips record
@@ -168,9 +239,9 @@ def submit_ip_address():
                 f"Received IP address from cardinal server generating pod "
                 f"for party {req['from_pid']}"
             )
-            orch = app.app_context().g.get('RUNNING_JOBS')[req["workflow_name"]]
-            orch.party.other_compute_ips[req["from_pid"]]["IP_PORT"] = \
-                f"{req['pod_ip_address']}:9000"
+            # insert ips into database
+
+            save_ip(req["workflow_name"], req["from_pid"], req['pod_ip_address'])
 
             response = {
                 "MSG": "OK"
@@ -214,10 +285,10 @@ def workflow_complete():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in app.app_context().g.get('RUNNING_JOBS'):
+        if req["workflow_name"] in get_running_jobs():
 
-            app.app_context().g.get('RUNNING_JOBS')[req["workflow_name"]].stop_workflow()
-            del app.app_context().g.get('RUNNING_JOBS')[req["workflow_name"]]
+            get_running_jobs()[req["workflow_name"]].stop_workflow()
+            del get_running_jobs()[req["workflow_name"]]
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
                 "MSG": "OK"
@@ -235,14 +306,48 @@ def workflow_complete():
         return jsonify(response)
 
 
-if __name__ != "__main__":
+def get_running_jobs():
+    cursor = mysql.connect().cursor()
+    cursor.execute("SELECT datasetId FROM datasets WHERE running == 1")
+    running_jobs = cursor.fetchmany()
+    mysql.connect().close()
+    app.logger.info(f"Running Jobs: {running_jobs}")
+    return running_jobs
 
+
+def get_ips(workflow_name):
+    cursor = mysql.connect().cursor()
+    cursor.execute("SELECT * FROM pods WHERE datasetId == ?", workflow_name)
+    ips = cursor.fetchmany()
+    mysql.connect().close()
+    app.logger.info(f"IPs: {ips}")
+    return ips
+
+
+def get_running_job(workflow_name):
+    cursor = mysql.connect().cursor()
+    cursor.execute("SELECT datasetId FROM datasets WHERE datasetId == ? AND running == 1", workflow_name)
+    running_jobs = cursor.fetchmany()
+    app.logger.info(f"Running Jobs: {running_jobs}")
+    mysql.connect().close()
+    return running_jobs
+
+
+def save_ip(workflow_name, from_pid, ip_addr):
+    conn = mysql.connect()
+    conn.autocommit(True)
+    cursor = conn.cursor()
+    sql = "INSERT IGNORE INTO pods (datasetId, PID, ipAddr ) VALUES (%s, %s, %s)"
+    val = (workflow_name, from_pid, f"{ip_addr}:9000")
+    cursor.execute(sql, val)
+    conn.close()
+
+
+if __name__ != "__main__":
     gunicorn_logger = logging.getLogger("gunicorn.error")
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
 
-
 if __name__ == "__main__":
-
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=True)

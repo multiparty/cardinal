@@ -12,6 +12,8 @@ from kubernetes import config as k_config
 from kubernetes.client.rest import ApiException
 
 
+
+
 class KubeParty(Party):
     def __init__(self, workflow_config: dict, app, handler: KubeHandler, num_workflows: int):
         super(KubeParty, self).__init__(workflow_config, app, handler, num_workflows)
@@ -71,9 +73,9 @@ class KubeParty(Party):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "SERVICE_NAME": f"{self.spec_prefix}-service",
-            # "SERVICE_IP": self.this_compute_ip,
+            # "SERVICE_IP": self.this_compute_ip,  # optional
             "SERVICE_PORT": 9000,
-            "NODE_PORT": self.compute_node_port,
+            # "NODE_PORT": self.compute_node_port, # optional
         }
         data_template = open(f"{self.templates_directory}/kube/service.tmpl", 'r').read()
 

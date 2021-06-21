@@ -4,7 +4,7 @@ import os
 import requests
 import time
 from cardinal.handlers.handler import Handler
-
+from wsgi import get_ips, get_running_job, save_ip
 
 """
 TODO: 
@@ -21,6 +21,11 @@ class Party:
         self.specs = {}
         self.this_compute_ip = self.fetch_available_ip_address()
         self.other_compute_ips = self._initialize_other_ips()
+
+        # ports needed
+        # query available ports
+        # assigned by pid
+
         self.compute_node_port = 30001 + num_workflows
         self.jiff_node_port = 31000 + num_workflows
         self.running = True
@@ -32,13 +37,13 @@ class Party:
         pass
 
     def _initialize_other_ips(self):
-        """
-        we want a dictionary where each entry is like PID: <IP>:<PORT>, with a unique port for each
-        compute party. The way I'm doing a unique port is just 9000 + PID, so like 9001, 9002, etc.
-
-        I'm setting the ip:port entries for each other compute party to None, because we haven't
-        actually exchanged IP addresses yet.
-        """
+        # """
+        # we want a dictionary where each entry is like PID: <IP>:<PORT>, with a unique port for each
+        # compute party. The way I'm doing a unique port is just 9000 + PID, so like 9001, 9002, etc.
+        #
+        # I'm setting the ip:port entries for each other compute party to None, because we haven't
+        # actually exchanged IP addresses yet.
+        # """
 
         # self entry
         ret = {
@@ -57,27 +62,27 @@ class Party:
 
         return ret
 
-    def _check_ip_records(self):
-        """
-        Look at our record of other parties' compute pod IP addresses,
-        return PIDs of any parties whose entries are still incomplete.
-        """
-
-        incomplete = []
-        for other_party in self.other_compute_ips.keys():
-            if not self.other_compute_ips[other_party]["IP_PORT"]:
-                incomplete.append(other_party)
-
-        return incomplete
-
-    def _check_ip_record_acks(self):
-
-        un_acked = []
-        for other_party in self.other_compute_ips.keys():
-            if not self.other_compute_ips[other_party]["ACKED"]:
-                un_acked.append(other_party)
-
-        return un_acked
+    # def _check_ip_records(self):
+    #     """
+    #     Look at our record of other parties' compute pod IP addresses,
+    #     return PIDs of any parties whose entries are still incomplete.
+    #     """
+    #
+    #     incomplete = []
+    #     for other_party in self.other_compute_ips.keys():
+    #         if not self.other_compute_ips[other_party]["IP_PORT"]:
+    #             incomplete.append(other_party)
+    #
+    #     return incomplete
+    #
+    # def _check_ip_record_acks(self):
+    #
+    #     un_acked = []
+    #     for other_party in self.other_compute_ips.keys():
+    #         if not self.other_compute_ips[other_party]["ACKED"]:
+    #             un_acked.append(other_party)
+    #
+    #     return un_acked
 
     def _exchange_ips(self):
         """
@@ -86,43 +91,55 @@ class Party:
         servers and those cardinal servers have received ours
         """
 
-        all_ips_received = False
-        all_parties_acked = False
-        while self.running and (not all_ips_received or not all_parties_acked):
+        ## Maybe and wait thread this off?
+        ## a way to kill this job?
 
-            for other_party in self.workflow_config["other_cardinals"]:
+        # all_ips_received = False
+        # all_parties_acked = False
 
-                if not self.other_compute_ips[other_party[0]]["ACKED"]:
-                    # if we haven't received a message from this party indicating
-                    # that they've received our pod IP information, then we send
-                    # them that information
-                    req = {
-                        "workflow_name": self.workflow_config["workflow_name"],
-                        "from_pid": self.workflow_config["PID"],
-                        "pod_ip_address": self.this_compute_ip
-                    }
+        #         req = {
+        #             "workflow_name": self.workflow_config["workflow_name"],
+        #             "from_pid": self.workflow_config["PID"],
+        #             "pod_ip_address": self.this_compute_ip
+        #         }
 
-                    dest_server = other_party[1]
-                    resp = requests.post(f"{dest_server}/api/submit_ip_address", json=req).json()
-                    self.app.logger.info(f"Submitted IP address to {dest_server} and got response: \n{resp}")
-
-                    if resp["MSG"] == "OK":
-                        self.other_compute_ips[other_party[0]]["ACKED"] = True
-
-            incomplete_parties = self._check_ip_records()
-            incomplete_acks = self._check_ip_record_acks()
-
-            if incomplete_parties:
-                self.app.logger.info(f"Waiting for IP information from the following parties: {incomplete_parties}")
-            else:
-                all_ips_received = True
-
-            if incomplete_acks:
-                self.app.logger.info(f"Waiting for IP acks from the following parties: {incomplete_acks}")
-            else:
-                all_parties_acked = True
-
-            time.sleep(10)
+        save_ip(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
+        ips = get_ips(self.workflow_config["workflow_name"])
+        while self.running and get_running_job(self.workflow_config["workflow_name"]) \
+                and (len(ips) != len(self.workflow_config["other_cardinals"])):
+            ips = get_ips(self.workflow_config["workflow_name"])
+            #
+            # for other_party in self.workflow_config["other_cardinals"]:
+            #
+            #     if not self.other_compute_ips[other_party[0]]["ACKED"]:
+            #         # if we haven't received a message from this party indicating
+            #         # that they've received our pod IP information, then we send
+            #         # them that information
+            #         req = {
+            #             "workflow_name": self.workflow_config["workflow_name"],
+            #             "from_pid": self.workflow_config["PID"],
+            #             "pod_ip_address": self.this_compute_ip
+            #         }
+            #
+            #         dest_server = other_party[1]
+            #         resp = requests.post(f"{dest_server}/api/submit_ip_address", json=req).json()
+            #         self.app.logger.info(f"Submitted IP address to {dest_server} and got response: \n{resp}")
+            #
+            #         if resp["MSG"] == "OK":
+            #             self.other_compute_ips[other_party[0]]["ACKED"] = True
+            #
+            # incomplete_parties = self._check_ip_records()
+            # incomplete_acks = self._check_ip_record_acks()
+            #
+            # if incomplete_parties:
+            #     self.app.logger.info(f"Waiting for IP information from the following parties: {incomplete_parties}")
+            # else:
+            #     all_ips_received = True
+            #
+            # if incomplete_acks:
+            #     self.app.logger.info(f"Waiting for IP acks from the following parties: {incomplete_acks}")
+            # else:
+            #     all_parties_acked = True
 
     def _build_all_pids_list(self):
 
@@ -150,7 +167,12 @@ class Party:
         Which is just the format that the congregation config file uses for IP addresses
         of the other compute parties.
         """
-        return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
+
+        party_config = get_ips(self.workflow_config["workflow_name"])
+        self.app.logger.info(f"Party Config: {party_config}")
+
+        # return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
+        return party_config
 
     def build_congregation_config(self):
         """
@@ -191,16 +213,16 @@ class Party:
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": "false",   # TODO - will eventually be configurable, hardcoded fine for now
+            "USE_FLOATS": "false",  # TODO - will eventually be configurable, hardcoded fine for now
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": 16777729,        # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_DECIMAL": 1,       # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_INTEGER": 1,       # TODO - will eventually be configurable, hardcoded fine for now
-            "NN_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
-            "BN_USE": "false"        # TODO - will eventually be configurable, hardcoded fine for now
+            "ZP": 16777729,  # TODO - will eventually be configurable, hardcoded fine for now
+            "FP_USE": "false",  # TODO - will eventually be configurable, hardcoded fine for now
+            "FP_DECIMAL": 1,  # TODO - will eventually be configurable, hardcoded fine for now
+            "FP_INTEGER": 1,  # TODO - will eventually be configurable, hardcoded fine for now
+            "NN_USE": "false",  # TODO - will eventually be configurable, hardcoded fine for now
+            "BN_USE": "false"  # TODO - will eventually be configurable, hardcoded fine for now
         }
 
         rendered = pystache.render(template, data)
