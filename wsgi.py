@@ -6,7 +6,8 @@ from flask import request
 from flask import jsonify
 from flask_cors import CORS
 from cardinal.database import app
-from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server
+from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, get_workflow, \
+    delete_workflow
 from cardinal import Orchestrator
 
 
@@ -36,33 +37,6 @@ def setup_db_conn():
     }
     """
 
-    # infra = os.environ.get("CLOUD_PROVIDER")
-    # if infra in {"EC2", "EKS"}:
-    #     msg = f"Unrecognized compute infrastructure: {infra}"
-    #     app.logger.error(msg)
-    #     raise Exception(msg)
-    # elif infra in {"GCE", "GKE"}:
-    #     req = request.get_json(force=True)
-    #
-    #     app.logger.info(f"Workflow submission received: {req}")
-    #     # app.config['MYSQL_DATABASE_USER'] = 'root'
-    #     # app.config['MYSQL_DATABASE_PASSWORD'] = 'password'
-    #     # app.config['MYSQL_DATABASE_DB'] = 'Cardinal'
-    #     # app.config['MYSQL_DATABASE_HOST'] = req["db_ip"]
-    #     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://://root:password@10.100.0.3:3306/Cardinal'
-    #     db = SQLAlchemy(app)
-    #
-    # elif infra in ("AKS", "AVM"):
-    #     msg = f"Unrecognized compute infrastructure: {infra}"
-    #     app.logger.error(msg)
-    #     raise Exception(msg)
-    #
-    # db.create_all()
-    #
-    # conn = mysql.connect()
-    # conn.autocommit(True)
-    # cursor = conn.cursor()
-
 
 @app.route("/api/submit", methods=["POST"])
 def submit():
@@ -83,8 +57,8 @@ def submit():
 
         # party 1 should already have an orchestrator since they started the JIFF server
         # if req['PID'] == 1:
-        if req["workflow_name"] in get_running_workflows():
-            orch = Orchestrator(req, app, len(get_running_workflows().keys()))
+        if workflow_exists(req["workflow_name"]):
+            orch = Orchestrator(req, app, len(get_running_workflows()))
             save_jiff_server(req["workflow_name"], req['jiff_server'])
 
             orch.run()
@@ -141,7 +115,7 @@ def start_jiff_server():
                 "MSG": msg
             }
         # if it is party one, make sure they didn't already start a JIFF server
-        elif req["workflow_name"] in get_running_workflows():
+        elif workflow_exists(req["workflow_name"]):
 
             msg = f"Workflow with name {req['workflow_name']} already has a JIFF server."
             app.logger.error(msg)
@@ -151,7 +125,7 @@ def start_jiff_server():
         # if they didn't start a JIFF server, start a new one and respond with its IP
         else:
 
-            orch = Orchestrator(req, app, len(get_running_workflows().keys()))
+            orch = Orchestrator(req, app, len(get_running_workflows()))
 
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
@@ -190,7 +164,7 @@ def submit_ip_address():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in get_running_workflows():
+        if workflow_exists(req["workflow_name"]):
             """
             if this IP information is legitimate, fetch the corresponding 
             orchestrator and update its other_pod_ips record
@@ -246,10 +220,10 @@ def workflow_complete():
         """
 
         req = request.get_json(force=True)
-        if req["workflow_name"] in get_running_workflows():
+        if workflow_exists(req["workflow_name"]):
 
-            get_running_workflows()[req["workflow_name"]].stop_workflow()
-            del get_running_workflows()[req["workflow_name"]]
+            workflow = get_workflow(req["workflow_name"])
+            delete_workflow(workflow)
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
                 "MSG": "OK"

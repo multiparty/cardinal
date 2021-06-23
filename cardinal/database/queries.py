@@ -14,10 +14,16 @@ def get_ips(workflow_name):
     return ips
 
 
-def get_running_workflow(workflow_name):
-    workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).all()
+def get_workflow(workflow_name):
+    workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).first()
     app.logger.info(f"Workflow {workflow} ")
     return workflow
+
+
+def workflow_exists(workflow_name):
+    workflow = Workflow.query.filter_by(Workflow.workflowName == workflow_name).first()
+    app.logger.info(f"Workflow {workflow} ")
+    return workflow is not None
 
 
 def save_pod(workflow_name, from_pid, ip_addr):
@@ -29,4 +35,9 @@ def save_pod(workflow_name, from_pid, ip_addr):
 def save_jiff_server(workflow_name, ip_addr):
     jiff_server = Jiff_Server(workflow_name, ip_addr)
     db.session.add(jiff_server)
+    db.session.commit()
+
+
+def delete_workflow(workflow):
+    db.session.delete(workflow)
     db.session.commit()

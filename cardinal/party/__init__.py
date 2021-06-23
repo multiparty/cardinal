@@ -4,7 +4,7 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, get_running_workflow
+from cardinal.database.queries import save_pod, get_ips, workflow_exists
 from cardinal.handlers.handler import Handler
 # from wsgi import get_ips, get_running_workflow, save_pod
 
@@ -107,7 +107,7 @@ class Party:
 
         save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
         ips = get_ips(self.workflow_config["workflow_name"])
-        while self.running and get_running_workflow(self.workflow_config["workflow_name"]) \
+        while self.running and workflow_exists(self.workflow_config["workflow_name"]) \
                 and (len(ips) != len(self.workflow_config["other_cardinals"])):
             ips = get_ips(self.workflow_config["workflow_name"])
             #
