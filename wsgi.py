@@ -7,7 +7,6 @@ from flask import jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
-from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://://root:password@10.100.0.3:3306/Cardinal'
@@ -16,6 +15,7 @@ db = SQLAlchemy(app)
 db.create_all()
 db.session.commit()
 
+from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server
 from cardinal import Orchestrator
 
 
