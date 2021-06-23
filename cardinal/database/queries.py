@@ -1,19 +1,22 @@
-from cardinal.database.models import Workflow, Pod, Jiff_Server
-from wsgi import db
+from cardinal.database import Workflow, Pod, Jiff_Server, app
+from cardinal.database import db
 
 
 def get_running_workflows():
     workflows = Workflow.query.all()
+    app.logger.info(f"Workflows {workflows} ")
     return workflows
 
 
 def get_ips(workflow_name):
     ips = Pod.query.filter(Pod.workflowName == workflow_name).all()
+    app.logger.info(f"Ips {ips} ")
     return ips
 
 
 def get_running_workflow(workflow_name):
     workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).all()
+    app.logger.info(f"Workflow {workflow} ")
     return workflow
 
 
