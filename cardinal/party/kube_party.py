@@ -12,8 +12,6 @@ from kubernetes import config as k_config
 from kubernetes.client.rest import ApiException
 
 
-
-
 class KubeParty(Party):
     def __init__(self, workflow_config: dict, app, handler: KubeHandler, num_workflows: int):
         super(KubeParty, self).__init__(workflow_config, app, handler, num_workflows)
@@ -95,7 +93,8 @@ class KubeParty(Party):
         """
         encoded_config = base64.b64encode(bytes(self.specs['CONGREGATION_CONFIG'], 'utf-8'))
         # TODO: fill in the "FILL IN" values in creds dict with your credentials
-        aws_creds = {'AWS_REGION': os.environ.get("AWS_REGION"), 'AWS_ACCESS_KEY_ID': os.environ.get("AWS_ACCESS_KEY_ID"),
+        aws_creds = {'AWS_REGION': os.environ.get("AWS_REGION"),
+                     'AWS_ACCESS_KEY_ID': os.environ.get("AWS_ACCESS_KEY_ID"),
                      'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
@@ -133,7 +132,6 @@ class KubeParty(Party):
                 self.app.logger.error("Error creating Service: \n{}\n".format(e))
                 time.sleep(30)
             retry += 1
-
 
     def get_service_ip(self):
         ip_address = ""
@@ -178,7 +176,6 @@ class KubeParty(Party):
         self.launch_service(service_body)
         self.get_service_ip()
 
-
     def build_all(self):
         # self.build_service_spec()
         self.build_pod_spec()
@@ -209,7 +206,8 @@ class KubeParty(Party):
         self.running = False  # to stop sending requests
         try:
             api_response = \
-                self.kube_client.delete_namespaced_config_map(f"{self.spec_prefix}-config-map", "default", pretty='true')
+                self.kube_client.delete_namespaced_config_map(f"{self.spec_prefix}-config-map", "default",
+                                                              pretty='true')
             self.app.logger.info("ConfigMap deleted successfully with response: \n{}\n".format(api_response))
         except ApiException as e:
             self.app.logger.error("Error deleting ConfigMap: \n{}\n".format(e))
@@ -231,7 +229,8 @@ class KubeParty(Party):
         if self.workflow_config['PID'] == 1:
             try:
                 api_response = \
-                    self.kube_client.delete_namespaced_service(f"{self.spec_prefix}-jiff-server-service", "default", pretty='true')
+                    self.kube_client.delete_namespaced_service(f"{self.spec_prefix}-jiff-server-service", "default",
+                                                               pretty='true')
                 self.app.logger.info("JIFF Service deleted successfully with response: \n{}\n".format(api_response))
             except ApiException as e:
                 self.app.logger.error("Error deleting JIFF Service: \n{}\n".format(e))
@@ -242,4 +241,3 @@ class KubeParty(Party):
                 self.app.logger.info("JIFF Pod deleted successfully with response: \n{}\n".format(api_response))
             except ApiException as e:
                 self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
-

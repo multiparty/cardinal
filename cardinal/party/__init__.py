@@ -4,7 +4,7 @@ import os
 import requests
 import time
 from cardinal.handlers.handler import Handler
-from wsgi import get_ips, get_running_job, save_ip
+from wsgi import get_ips, get_running_workflow, save_pod
 
 """
 TODO: 
@@ -91,8 +91,8 @@ class Party:
         servers and those cardinal servers have received ours
         """
 
-        ## Maybe and wait thread this off?
-        ## a way to kill this job?
+        # Maybe and wait thread this off?
+        # a way to kill this job?
 
         # all_ips_received = False
         # all_parties_acked = False
@@ -103,9 +103,9 @@ class Party:
         #             "pod_ip_address": self.this_compute_ip
         #         }
 
-        save_ip(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
+        save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
         ips = get_ips(self.workflow_config["workflow_name"])
-        while self.running and get_running_job(self.workflow_config["workflow_name"]) \
+        while self.running and get_running_workflow(self.workflow_config["workflow_name"]) \
                 and (len(ips) != len(self.workflow_config["other_cardinals"])):
             ips = get_ips(self.workflow_config["workflow_name"])
             #
