@@ -3,8 +3,10 @@ import pystache
 import os
 import requests
 import time
+
+from cardinal.database.queries import save_pod, get_ips, get_running_workflow
 from cardinal.handlers.handler import Handler
-from wsgi import get_ips, get_running_workflow, save_pod
+# from wsgi import get_ips, get_running_workflow, save_pod
 
 """
 TODO: 

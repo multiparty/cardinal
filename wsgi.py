@@ -7,89 +7,16 @@ from flask import jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
-from cardinal import Orchestrator
+from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://://root:password@10.100.0.3:3306/Cardinal'
 db = SQLAlchemy(app)
 
-
-class Dataset(db.Model):
-    datasetId = db.Column(db.String, primary_key=True)
-    endpoint = db.Column(db.String)
-    PID = db.Column(db.Integer)
-    bigNumber = db.Column(db.Boolean)
-    decimalDigits = db.Column(db.Integer)
-    integerDigits = db.Column(db.Integer)
-    negativeNumber = db.Column(db.Boolean)
-    ZP = db.Column(db.Boolean)
-
-    def __init__(self, datasetId, endpoint, PID, bigNumber, decimalDigits, integerDigits, negativeNumber, ZP):
-        self.datasetId = datasetId
-        self.endpoint = endpoint
-        self.PID = PID
-        self.bigNumber = bigNumber
-        self.decimalDigits = decimalDigits
-        self.integerDigits = integerDigits
-        self.negativeNumber = negativeNumber
-        self.ZP = ZP
-
-    def __repr__(self):
-        return '<datasetId %r>' % self.datasetId
-
-
-class Workflow(db.Model):
-    workflowName = db.Column(db.String, primary_key=True)
-    endpoint = db.Column(db.String)
-    PID = db.Column(db.Integer)
-    bigNumber = db.Column(db.Boolean)
-    decimalDigits = db.Column(db.Integer)
-    integerDigits = db.Column(db.Integer)
-    negativeNumber = db.Column(db.Boolean)
-    ZP = db.Column(db.Boolean)
-
-    def __init__(self, workflowName, endpoint, PID, bigNumber, decimalDigits, integerDigits, negativeNumber, ZP):
-        self.workflowName = workflowName
-        self.endpoint = endpoint
-        self.PID = PID
-        self.bigNumber = bigNumber
-        self.decimalDigits = decimalDigits
-        self.integerDigits = integerDigits
-        self.negativeNumber = negativeNumber
-        self.ZP = ZP
-
-    def __repr__(self):
-        return '<workflowName %r>' % self.workflowName
-
-
-class Pod(db.Model):
-    workflowName = db.Column(db.String, primary_key=True)
-    PID = db.Column(db.Integer)
-    ipAddr = db.Column(db.String)
-
-    def __init__(self, workflowName, PID, ipAddr):
-        self.workflowName = workflowName
-        self.PID = PID
-        self.ipAddr = ipAddr
-
-    def __repr__(self):
-        return '<Pod ip %r>' % self.ipAddr
-
-
-class Jiff_Server(db.Model):
-    workflowName = db.Column(db.String, primary_key=True)
-    ipAddr = db.Column(db.String)
-
-    def __init__(self, workflowName, ipAddr):
-        self.workflowName = workflowName
-        self.ipAddr = ipAddr
-
-    def __repr__(self):
-        return '<Jiff ip %r>' % self.ipAddr
-
-
 db.create_all()
 db.session.commit()
+
+from cardinal import Orchestrator
 
 
 @app.route("/", defaults={"path": ""})
@@ -344,36 +271,6 @@ def workflow_complete():
             }
 
         return jsonify(response)
-
-
-def get_running_workflows():
-    workflows = Workflow.query.all()
-    app.logger.info(f"Running Jobs: {workflows}")
-    return workflows
-
-
-def get_ips(workflow_name):
-    ips = Pod.query.filter(Pod.workflowName == workflow_name).all()
-    app.logger.info(f"IPs: {ips}")
-    return ips
-
-
-def get_running_workflow(workflow_name):
-    workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).all()
-    app.logger.info(f"Running workflow: {workflow}")
-    return workflow
-
-
-def save_pod(workflow_name, from_pid, ip_addr):
-    pod = Pod(workflow_name, from_pid, ip_addr)
-    db.session.add(pod)
-    db.session.commit()
-
-
-def save_jiff_server(workflow_name, ip_addr):
-    jiff_server = Jiff_Server(workflow_name, ip_addr)
-    db.session.add(jiff_server)
-    db.session.commit()
 
 
 if __name__ != "__main__":
