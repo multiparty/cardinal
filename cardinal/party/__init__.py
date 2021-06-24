@@ -4,9 +4,8 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, workflow_exists
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_name
 from cardinal.handlers.handler import Handler
-# from wsgi import get_ips, get_running_workflow, save_pod
 
 """
 TODO: 
@@ -21,15 +20,8 @@ class Party:
         self.handler = handler
         self.templates_directory = f"{os.path.dirname(os.path.realpath(__file__))}/templates"
         self.specs = {}
-        self.this_compute_ip = self.fetch_available_ip_address()
+        self.this_compute_ip = ""
         self.other_compute_ips = self._initialize_other_ips()
-
-        # ports needed
-        # query available ports
-        # assigned by pid
-
-        self.compute_node_port = 30001 + num_workflows
-        self.jiff_node_port = 31000 + num_workflows
         self.running = True
 
     def run(self):
@@ -105,11 +97,16 @@ class Party:
         #             "pod_ip_address": self.this_compute_ip
         #         }
 
+        #TODO should add better error checking and not assume 3 ip entries == 3 other cardinals
         save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
         ips = get_ips(self.workflow_config["workflow_name"])
         while self.running and workflow_exists(self.workflow_config["workflow_name"]) \
-                and (len(ips) != len(self.workflow_config["other_cardinals"])):
+                and (len(ips) != (len(self.workflow_config["other_cardinals"]) - 1)):
             ips = get_ips(self.workflow_config["workflow_name"])
+
+
+            #TODO store into compute ips
+            time.sleep(3)
             #
             # for other_party in self.workflow_config["other_cardinals"]:
             #
@@ -170,7 +167,8 @@ class Party:
         of the other compute parties.
         """
 
-        party_config = get_ips(self.workflow_config["workflow_name"])
+        ips = get_ips(self.workflow_config["workflow_name"])
+        party_config = json.dumps([f"{k.PID}:{k.ipAddr}:9000" for k in ips])
         self.app.logger.info(f"Party Config: {party_config}")
 
         # return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
@@ -209,22 +207,22 @@ class Party:
         then just grab a file from that location with a .json extension instead of
         .csv, since we ensure it exists when we upload the dataset.
         """
-
+        workflow = get_workflow_by_name(self.workflow_config["workflow_name"])
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": "false",  # TODO - will eventually be configurable, hardcoded fine for now
+            "USE_FLOATS": workflow.fixedPoint,
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": 16777729,  # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_USE": "false",  # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_DECIMAL": 1,  # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_INTEGER": 1,  # TODO - will eventually be configurable, hardcoded fine for now
-            "NN_USE": "false",  # TODO - will eventually be configurable, hardcoded fine for now
-            "BN_USE": "false"  # TODO - will eventually be configurable, hardcoded fine for now
+            "ZP": workflow.ZP,
+            "FP_USE": workflow.fixedPoint,
+            "FP_DECIMAL": workflow.decimalDigits,
+            "FP_INTEGER": workflow.integerDigits,
+            "NN_USE": workflow.negativeNumber,
+            "BN_USE": workflow.bigNumber
         }
 
         rendered = pystache.render(template, data)

@@ -41,8 +41,7 @@ class Orchestrator:
         self.party.run()
 
     def start_jiff_server(self):
-        jiff_ip = self.handler.fetch_jiff_server_ip_address()
-        self.party.start_jiff_server(jiff_ip)
+        jiff_ip = self.party.start_jiff_server()
         return jiff_ip
 
     def stop_workflow(self):
@@ -50,3 +49,6 @@ class Orchestrator:
 
     def update_jiff_server(self, jiff_server):
         self.party.workflow_config['jiff_server'] = jiff_server
+
+    def get_pod_status(self):
+        return self.party.get_pod_status()

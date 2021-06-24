@@ -1,15 +1,14 @@
 import logging
 import os
-
-
+from flask import Flask
 from flask import request
 from flask import jsonify
 from flask_cors import CORS
 from cardinal.database import app
-from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, get_workflow, \
-    delete_workflow
+from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, \
+    save_workflow, delete_entry, get_jiff_server_by_workflow, dataset_exists, save_dataset, \
+    get_pod_by_workflow_and_pid, get_workflow_by_name
 from cardinal import Orchestrator
-
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
@@ -59,8 +58,6 @@ def submit():
         # if req['PID'] == 1:
         if workflow_exists(req["workflow_name"]):
             orch = Orchestrator(req, app, len(get_running_workflows()))
-            save_jiff_server(req["workflow_name"], req['jiff_server'])
-
             orch.run()
 
             response = {
@@ -132,6 +129,7 @@ def start_jiff_server():
             # Add entry to get_running_jobs() so that we can access that orchestrator later on
             # get_running_jobs()[req['workflow_name']] = orch
 
+            # TODO move this out so its not a hanging object
             jiff_ip = orch.start_jiff_server()
 
             save_jiff_server(req["workflow_name"], jiff_ip)
@@ -199,6 +197,119 @@ def submit_ip_address():
         return jsonify(response)
 
 
+@app.route("/api/submit_workflow", methods=["POST"])
+def submit_workflow():
+    """
+   data = {
+            workflowName = db.Column(db.String(150), primary_key=True)
+            PID = db.Column(db.Integer)
+            bigNumber = db.Column(db.Boolean)
+            fixedPoint = db.Column(db.Boolean)
+            decimalDigits = db.Column(db.Integer)
+            integerDigits = db.Column(db.Integer)
+            negativeNumber = db.Column(db.Boolean)
+            ZP = db.Column(db.Boolean)
+        }
+    """
+
+    if request.method == "POST":
+        # TODO Document
+        """
+        request could look like:
+        {
+            "workflow_name": "test-workflow",   # name of relevant workflow
+            "big_number": true, 
+            "fixed_point": false, 
+            "decimal_digits": 2, 
+            "integer_digits": 2, 
+            "negative_number": true, 
+            "zp": false, 
+            
+        }
+        """
+
+        req = request.get_json(force=True)
+        if get_workflow_by_name(req["workflow_name"]) is not None:
+            """
+            if this IP information is legitimate, fetch the corresponding 
+            orchestrator and update its other_pod_ips record
+            """
+
+            app.logger.error(
+                f"Error saving workflow, workflow already exists. (Try running workflow complete) "
+            )
+            # insert ips into database
+
+            response = {
+                "MSG": f"ERR: Workflow {req['workflow_name']} already exists."
+            }
+        else:
+
+            app.logger.info(
+                f"Saving workflow {req['workflow_name']}"
+                f"for workflow {req['workflow_name']}, but this workflow "
+                f"isn't present in record of running workflows."
+            )
+
+            save_workflow(req['workflow_name'], req['big_number'], req['fixed_point'],
+                          req['decimal_digits'], req['integer_digits'], req['negative_number'], req['zp'])
+            response = {
+                "MSG": "OK"
+            }
+
+        return jsonify(response)
+
+
+@app.route("/api/submit_dataset", methods=["POST"])
+def submit_dataset():
+    """
+   data = {
+        datasetId = db.Column(db.String(150))
+        sourceBucket = db.Column(db.String(150))
+        sourceKey = db.Column(db.String(150))
+        PID = db.Column(db.Integer)
+        }
+    """
+
+    if request.method == "POST":
+        # TODO Document
+        """
+        request could look like:
+        {
+            "dataset_id": "test-workflow",   # name of relevant workflow
+            "source_bucket": some source,                   
+            "source_key": some key, 
+            "pid": 2, 
+
+        }
+        """
+
+        req = request.get_json(force=True)
+        if dataset_exists(req["dataset_id"], req['PID']):
+
+            app.logger.error(
+                f"Error saving dataset, dataset already exists. (Try updating the dataset) "
+                f"for party {req['PID']}"
+            )
+            # insert ips into database
+
+            response = {
+                "MSG": f"ERR: Dataset {req['dataset_id']} already exists."
+            }
+        else:
+
+            app.logger.info(
+                f"Saving dataset {req['dataset_id']}"
+            )
+
+            save_dataset(req['dataset_id'], req['source_bucket'], req['source_key'], req['PID'])
+            response = {
+                "MSG": "OK"
+            }
+
+        return jsonify(response)
+
+
 @app.route("/api/workflow_complete", methods=["POST"])
 def workflow_complete():
     """
@@ -219,11 +330,25 @@ def workflow_complete():
         }
         """
 
+        # TODO ensure only targets its own running jobs
         req = request.get_json(force=True)
         if workflow_exists(req["workflow_name"]):
 
-            workflow = get_workflow(req["workflow_name"])
-            delete_workflow(workflow)
+            workflow = get_workflow_by_name(req["workflow_name"])
+            delete_entry(workflow)
+
+            jiff_server = get_jiff_server_by_workflow(req["workflow_name"])
+            if jiff_server is not None:
+                delete_entry(jiff_server)
+
+            pod = get_pod_by_workflow_and_pid(req["workflow_name"], req["PID"])
+            if pod is not None:
+                delete_entry(pod)
+
+            workflow = get_workflow_by_name(req["workflow_name"])
+            if workflow is not None:
+                delete_entry(workflow)
+
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
             response = {
                 "MSG": "OK"
@@ -233,6 +358,41 @@ def workflow_complete():
             app.logger.error(
                 f"Received request indicating the workflow {req['workflow_name']} "
                 f"completed, but this workflow is not present in running jobs"
+                f"record. Nothing to do.")
+            response = {
+                "MSG": f"ERR: {req['workflow_name']} not in running jobs record."
+            }
+
+        return jsonify(response)
+
+
+@app.route("/api/status", methods=["POST"])
+def get_status():
+    """
+    Returns the status of the pod.
+    """
+
+    if request.method == "POST":
+        """
+        request looks like:
+        {
+            "workflow_name": "test-workflow"
+        }
+        """
+
+        req = request.get_json(force=True)
+        if workflow_exists(req['workflow_name']):
+            # TODO fit into database
+            # Get the pod by workflow and read the status
+            # status = RUNNING_JOBS[req['workflow_name']].get_pod_status()
+            status = ''
+            response = {
+                "status": status
+            }
+        else:
+            app.logger.error(
+                f"Received request asking the pod status in {req['workflow_name']} "
+                f"but this workflow is not present in running jobs"
                 f"record. Nothing to do.")
             response = {
                 "MSG": f"ERR: {req['workflow_name']} not in running jobs record."
