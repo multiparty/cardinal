@@ -21,7 +21,7 @@ def get_workflow(workflow_name):
 
 
 def workflow_exists(workflow_name):
-    workflow = Workflow.query.filter_by(Workflow.workflowName == workflow_name).first()
+    workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).first()
     app.logger.info(f"Workflow {workflow} ")
     return workflow is not None
 
