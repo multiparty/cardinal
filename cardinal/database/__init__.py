@@ -3,8 +3,9 @@ from flask import Flask
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@10.100.0.3:3306/cardinal'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@10.100.3.4:3306/cardinal'
 db = SQLAlchemy(app)
+
 
 class Dataset(db.Model):
     datasetId = db.Column(db.String(150), primary_key=True)
