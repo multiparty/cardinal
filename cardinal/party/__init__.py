@@ -2,8 +2,9 @@ import json
 import pystache
 import os
 import requests
-import time
+import datetime
 from cardinal.handlers.handler import Handler
+import time
 
 """
 TODO: 
@@ -21,7 +22,11 @@ class Party:
         self.this_compute_ip = ""
         self.other_compute_ips = self._initialize_other_ips()
         self.running = True
-        self.event_timestamps = []  # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
+        self.event_timestamps = [] # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
+        if os.environ.get('PROFILE') and os.environ.get('PROFILE').lower() == 'true':
+            self.PROFILE = True 
+        else:
+            self.PROFILE = False
 
     def run(self):
         """
