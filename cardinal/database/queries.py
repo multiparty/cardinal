@@ -6,12 +6,14 @@ from cardinal.database import db
 
 def get_running_workflows():
     workflows = Workflow.query.all()
+    db.session.commit()
     app.logger.info(f"Workflows {workflows} ")
     return workflows
 
 
 def get_ips(workflow_name):
     ips = Pod.query.filter(Pod.workflowName == workflow_name).all()
+    db.session.commit()
     app.logger.info(f"Ips {ips} ")
     app.logger.info(f"Ips length: {len(ips)} ")
     return ips
@@ -19,30 +21,35 @@ def get_ips(workflow_name):
 
 def get_jiff_server_by_workflow(workflow_name):
     jiff_server = JiffServer.query.filter(JiffServer.workflowName == workflow_name).first()
+    db.session.commit()
     app.logger.info(f"Jiff Server {jiff_server} ")
     return jiff_server
 
 
 def get_pod_by_workflow_and_pid(workflow_name, pid):
     pods = Pod.query.filter(and_(Pod.workflowName == workflow_name, Pod.PID == pid)).first()
+    db.session.commit()
     app.logger.info(f"Pods {pods} ")
     return pods
 
 
 def get_workflow_by_name(workflow_name):
     workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).first()
+    db.session.commit()
     app.logger.info(f"Workflow {workflow} ")
     return workflow
 
 
 def get_dataset_by_id_and_pid(dataset_id, pid):
     dataset = Dataset.query.filter(and_(Dataset.datasetId == dataset_id, Dataset.PID == pid)).first()
+    db.session.commit()
     app.logger.info(f"Dataset Server {dataset} ")
     return dataset
 
 
 def workflow_exists(workflow_name):
     workflow = JiffServer.query.filter(JiffServer.workflowName == workflow_name).first()
+    db.session.commit()
     exists = workflow is not None
     app.logger.info(f"Workflow Exists: {exists} ")
     return exists
@@ -50,6 +57,7 @@ def workflow_exists(workflow_name):
 
 def dataset_exists(dataset_id, pid):
     dataset = Dataset.query.filter(and_(Dataset.datasetId == dataset_id, Dataset.PID == pid)).first()
+    db.session.commit()
     exists = dataset is not None
 
     app.logger.info(f"Dataset Exists: {exists} ")
