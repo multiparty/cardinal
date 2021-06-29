@@ -101,7 +101,7 @@ class Party:
         save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
         ips = get_ips(self.workflow_config["workflow_name"])
         while self.running and workflow_exists(self.workflow_config["workflow_name"]) \
-                and (len(ips) != (len(self.workflow_config["other_cardinals"]) - 1)):
+                and (len(ips) < 3):
             ips = get_ips(self.workflow_config["workflow_name"])
 
 
