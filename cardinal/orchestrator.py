@@ -66,3 +66,6 @@ class Orchestrator:
 
     def get_timestamps(self):
         return self.party.event_timestamps
+
+    def get_pod_status(self):
+        return self.party.get_pod_status()

@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import pystache
+import time
 import yaml
 import datetime
 from cardinal.party import Party
@@ -162,7 +163,7 @@ class KubeParty(Party):
             return ip_address
         else:
             self.app.logger.error("Failed to get compute ip address")
-
+            
     def launch_pod(self, pod_body):
         try:
             api_response = self.kube_client.create_namespaced_pod("default", body=pod_body, pretty='true')
@@ -299,3 +300,13 @@ class KubeParty(Party):
                 'event': 'Worfkflow stopped',
                 'time': datetime.datetime.now()
             })
+
+
+    def get_pod_status(self):
+        try:
+            api_response = self.kube_client.read_namespaced_pod_status(f"{self.spec_prefix}-pod", "default", pretty='true')
+            self.app.logger.info("Pod Status : \n{}\n".format(api_response.status.phase))
+            return api_response.status.phase
+        except ApiException as e:
+            self.app.logger.error("Error getting Pod status: \n{}\n".format(e))
+

@@ -234,6 +234,38 @@ def workflow_complete():
         return jsonify(response)
 
 
+@app.route("/api/status", methods=["POST"])
+def get_status():
+    """
+    Returns the status of the pod.
+    """
+
+    if request.method == "POST":
+        """
+        request looks like:
+        {
+            "workflow_name": "test-workflow"
+        }
+        """
+
+        req = request.get_json(force=True)
+        if req["workflow_name"] in RUNNING_JOBS:
+            status = RUNNING_JOBS[req['workflow_name']].get_pod_status()
+            response = {
+                "status": status
+            }
+        else:
+            app.logger.error(
+                f"Received request asking the pod status in {req['workflow_name']} "
+                f"but this workflow is not present in running jobs"
+                f"record. Nothing to do.")
+            response = {
+                "MSG": f"ERR: {req['workflow_name']} not in running jobs record."
+            }
+
+        return jsonify(response)
+
+
 if __name__ != "__main__":
 
     gunicorn_logger = logging.getLogger("gunicorn.error")
