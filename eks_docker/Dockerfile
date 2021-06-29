@@ -14,6 +14,9 @@ ENV PORT=5000
 ENV CLOUD_PROVIDER="EKS"
 ENV REGION="us-east-1"
 
+# profile flag - set to "true" to receive profiling timestamps with each workflow
+ENV PROFILE="false"
+
 # Information for curia
 ENV AWS_REGION=""
 ENV AWS_ACCESS_KEY_ID=""

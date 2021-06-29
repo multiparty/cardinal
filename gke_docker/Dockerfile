@@ -15,6 +15,9 @@ ENV CLOUD_PROVIDER="GKE"
 ENV PROJECT="curia-test"
 ENV REGION="us-east1"
 
+# profile flag - set to "true" to receive profiling timestamps with each workflow
+ENV PROFILE="false"
+
 # Information for curia
 ENV AWS_REGION=""
 ENV AWS_ACCESS_KEY_ID=""
