@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@10.100.3.4:3306/cardinal'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@34.106.116.233:3306/cardinal'
 db = SQLAlchemy(app)
 
 
@@ -30,7 +30,7 @@ class Workflow(db.Model):
     decimalDigits = db.Column(db.Integer)
     integerDigits = db.Column(db.Integer)
     negativeNumber = db.Column(db.Boolean)
-    ZP = db.Column(db.Boolean)
+    ZP = db.Column(db.Integer)
 
     def __init__(self, workflowName, bigNumber, fixedPoint, decimalDigits, integerDigits, negativeNumber,
                  ZP):

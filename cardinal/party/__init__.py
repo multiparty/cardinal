@@ -40,6 +40,7 @@ class Party:
         # """
 
         # self entry
+
         ret = {
             int(self.workflow_config["PID"]): {
                 "IP_PORT": "0.0.0.0:9000",
@@ -168,7 +169,11 @@ class Party:
         """
 
         ips = get_ips(self.workflow_config["workflow_name"])
-        party_config = json.dumps([f"{int(k.PID)}:{k.ipAddr}:9000" for k in ips])
+        for ip in ips:
+            if ip.PID == self.workflow_config["PID"]:
+                ip.ipAddr = "0.0.0.0"
+
+        party_config = json.dumps([f"{k.PID}:{k.ipAddr}:9000" for k in ips])
         self.app.logger.info(f"Party Config: {party_config}")
 
         # return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
@@ -213,21 +218,22 @@ class Party:
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": bool(workflow.fixedPoint),
+            "USE_FLOATS": f"{str(workflow.fixedPoint).lower()}",
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": bool(workflow.ZP),
-            "FP_USE": bool(workflow.fixedPoint),
-            "FP_DECIMAL": int(workflow.decimalDigits),
-            "FP_INTEGER": int(workflow.integerDigits),
-            "NN_USE": bool(workflow.negativeNumber),
-            "BN_USE": bool(workflow.bigNumber)
+            "ZP": workflow.ZP,
+            "FP_USE": f"{str(workflow.fixedPoint).lower()}",
+            "FP_DECIMAL": workflow.decimalDigits,
+            "FP_INTEGER": workflow.integerDigits,
+            "NN_USE": f"{str(workflow.negativeNumber).lower()}",
+            "BN_USE": f"{str(workflow.bigNumber).lower()}"
         }
         self.app.logger.info(f"Data {data}")
 
         rendered = pystache.render(template, data)
         self.specs["CONGREGATION_CONFIG"] = rendered
+        self.app.logger.info(f"Data Rendered {rendered}")
 
     def fetch_available_ip_address(self):
         return self.handler.fetch_available_ip_address()

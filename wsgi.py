@@ -337,6 +337,9 @@ def workflow_complete():
             workflow = get_workflow_by_name(req["workflow_name"])
             delete_entry(workflow)
 
+            orch = Orchestrator(req, app, len(get_running_workflows()))
+            orch.stop_workflow()
+
             jiff_server = get_jiff_server_by_workflow(req["workflow_name"])
             if jiff_server is not None:
                 delete_entry(jiff_server)
@@ -345,14 +348,10 @@ def workflow_complete():
             if pod is not None:
                 delete_entry(pod)
 
-            workflow = get_workflow_by_name(req["workflow_name"])
-            if workflow is not None:
-                delete_entry(workflow)
-
-            app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
-            response = {
-                "MSG": "OK"
-            }
+                app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
+                response = {
+                    "MSG": "OK"
+                }
         else:
 
             app.logger.error(
