@@ -8,69 +8,76 @@ db = SQLAlchemy(app)
 
 class Dataset(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    datasetId = db.Column(db.String(150))
-    sourceBucket = db.Column(db.String(150))
-    sourceKey = db.Column(db.String(150))
-    PID = db.Column(db.Integer)
+    dataset_id = db.Column(db.String(150))
+    source_bucket = db.Column(db.String(150))
+    source_key = db.Column(db.String(150))
+    pid = db.Column(db.Integer)
 
-    def __init__(self, datasetId, sourceBucket, sourceKey, PID):
-        self.datasetId = datasetId
-        self.sourceBucket = sourceBucket
-        self.sourceKey = sourceKey
-        self.PID = PID
+    def __init__(self, dataset_id, source_bucket, source_key, pid):
+        self.datasetId = dataset_id
+        self.sourceBucket = source_bucket
+        self.sourceKey = source_key
+        self.PID = pid
 
     def __repr__(self):
-        return '<datasetId %r>' % self.datasetId
+        return '<datasetId %r>' % self.dataset_id
 
 
 class Workflow(db.Model):
-    workflowName = db.Column(db.String(150), primary_key=True)
-    bigNumber = db.Column(db.Boolean)
-    fixedPoint = db.Column(db.Boolean)
-    decimalDigits = db.Column(db.Integer)
-    integerDigits = db.Column(db.Integer)
-    negativeNumber = db.Column(db.Boolean)
-    ZP = db.Column(db.Integer)
+    source_key = db.Column(db.String(150), primary_key=True)
+    source_bucket = db.Column(db.String(150))
+    operation = db.Column(db.String(150))
+    dataset_id = db.Column(db.String(150))
+    big_number = db.Column(db.Boolean)
+    fixed_point = db.Column(db.Boolean)
+    decimal_digits = db.Column(db.Integer)
+    integer_digits = db.Column(db.Integer)
+    negative_number = db.Column(db.Boolean)
+    zp = db.Column(db.Integer)
 
-    def __init__(self, workflowName, bigNumber, fixedPoint, decimalDigits, integerDigits, negativeNumber,
-                 ZP):
-        self.workflowName = workflowName
-        self.bigNumber = bigNumber
-        self.fixedPoint = fixedPoint
-        self.decimalDigits = decimalDigits
-        self.integerDigits = integerDigits
-        self.negativeNumber = negativeNumber
-        self.ZP = ZP
+    def __init__(self, source_key, source_bucket, dataset_id, operation, big_number,
+                 fixed_point, decimal_digits, integer_digits, negative_number,
+                 zp):
+        self.source_key = source_key
+        self.source_bucket = source_bucket
+        self.dataset_id = dataset_id
+        self.operation = operation
+        self.big_number = big_number
+        self.fixed_point = fixed_point
+        self.decimal_digits = decimal_digits
+        self.integer_digits = integer_digits
+        self.negative_number = negative_number
+        self.zp = zp
 
     def __repr__(self):
-        return '<workflowName %r>' % self.workflowName
+        return '<source_key %r>' % self.source_key
 
 
 class Pod(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    workflowName = db.Column(db.String(150))
-    PID = db.Column(db.Integer)
-    ipAddr = db.Column(db.String(150))
+    workflow_name = db.Column(db.String(150))
+    pid = db.Column(db.Integer)
+    ip_addr = db.Column(db.String(150))
 
-    def __init__(self, workflowName, PID, ipAddr):
-        self.workflowName = workflowName
-        self.PID = PID
-        self.ipAddr = ipAddr
+    def __init__(self, workflow_name, pid, ip_addr):
+        self.workflow_name = workflow_name
+        self.pid = pid
+        self.ip_addr = ip_addr
 
     def __repr__(self):
-        return '<Pod ip %r>' % self.ipAddr
+        return '<Pod ip %r>' % self.ip_addr
 
 
 class JiffServer(db.Model):
-    workflowName = db.Column(db.String(150), primary_key=True)
-    ipAddr = db.Column(db.String(150))
+    workflow_name = db.Column(db.String(150), primary_key=True)
+    ip_addr = db.Column(db.String(150))
 
-    def __init__(self, workflowName, ipAddr):
-        self.workflowName = workflowName
-        self.ipAddr = ipAddr
+    def __init__(self, workflow_name, ip_addr):
+        self.workflow_name = workflow_name
+        self.ip_addr = ip_addr
 
     def __repr__(self):
-        return '<Jiff ip %r>' % self.ipAddr
+        return '<Jiff ip %r>' % self.ip_addr
 
 
 db.create_all()

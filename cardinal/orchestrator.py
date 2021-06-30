@@ -31,7 +31,7 @@ class Orchestrator:
         """
         Assumptions:
             - chamberlain has already launched a jiff server for this computation,
-            and it's running at the IP address from the workfow_config
+            and it's running at the IP address from the workflow_config
             - the machines indicated by the "other_cardinals" entry are also
             generating compute_party pods for this computation
             - we are responsible for generating a compute_party pod which will

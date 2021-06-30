@@ -4,7 +4,7 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_name
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id
 from cardinal.handlers.handler import Handler
 
 """
@@ -57,28 +57,6 @@ class Party:
 
         return ret
 
-    # def _check_ip_records(self):
-    #     """
-    #     Look at our record of other parties' compute pod IP addresses,
-    #     return PIDs of any parties whose entries are still incomplete.
-    #     """
-    #
-    #     incomplete = []
-    #     for other_party in self.other_compute_ips.keys():
-    #         if not self.other_compute_ips[other_party]["IP_PORT"]:
-    #             incomplete.append(other_party)
-    #
-    #     return incomplete
-    #
-    # def _check_ip_record_acks(self):
-    #
-    #     un_acked = []
-    #     for other_party in self.other_compute_ips.keys():
-    #         if not self.other_compute_ips[other_party]["ACKED"]:
-    #             un_acked.append(other_party)
-    #
-    #     return un_acked
-
     def _exchange_ips(self):
         """
         iterates over entries in self.other_pod_ips, and terminates only when we
@@ -86,60 +64,15 @@ class Party:
         servers and those cardinal servers have received ours
         """
 
-        # Maybe and wait thread this off?
-        # a way to kill this job?
-
-        # all_ips_received = False
-        # all_parties_acked = False
-
-        #         req = {
-        #             "workflow_name": self.workflow_config["workflow_name"],
-        #             "from_pid": self.workflow_config["PID"],
-        #             "pod_ip_address": self.this_compute_ip
-        #         }
-
-        #TODO should add better error checking and not assume 3 ip entries == 3 other cardinals
+        # TODO should add better error checking and not assume 3 ip entries == 3 other cardinals
         save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
         ips = get_ips(self.workflow_config["workflow_name"])
         while self.running and workflow_exists(self.workflow_config["workflow_name"]) \
                 and (len(ips) < 3):
             ips = get_ips(self.workflow_config["workflow_name"])
 
-
-            #TODO store into compute ips
+            # TODO store into compute ips
             time.sleep(3)
-            #
-            # for other_party in self.workflow_config["other_cardinals"]:
-            #
-            #     if not self.other_compute_ips[other_party[0]]["ACKED"]:
-            #         # if we haven't received a message from this party indicating
-            #         # that they've received our pod IP information, then we send
-            #         # them that information
-            #         req = {
-            #             "workflow_name": self.workflow_config["workflow_name"],
-            #             "from_pid": self.workflow_config["PID"],
-            #             "pod_ip_address": self.this_compute_ip
-            #         }
-            #
-            #         dest_server = other_party[1]
-            #         resp = requests.post(f"{dest_server}/api/submit_ip_address", json=req).json()
-            #         self.app.logger.info(f"Submitted IP address to {dest_server} and got response: \n{resp}")
-            #
-            #         if resp["MSG"] == "OK":
-            #             self.other_compute_ips[other_party[0]]["ACKED"] = True
-            #
-            # incomplete_parties = self._check_ip_records()
-            # incomplete_acks = self._check_ip_record_acks()
-            #
-            # if incomplete_parties:
-            #     self.app.logger.info(f"Waiting for IP information from the following parties: {incomplete_parties}")
-            # else:
-            #     all_ips_received = True
-            #
-            # if incomplete_acks:
-            #     self.app.logger.info(f"Waiting for IP acks from the following parties: {incomplete_acks}")
-            # else:
-            #     all_parties_acked = True
 
     def _build_all_pids_list(self):
 
@@ -170,10 +103,10 @@ class Party:
 
         ips = get_ips(self.workflow_config["workflow_name"])
         for ip in ips:
-            if ip.PID == self.workflow_config["PID"]:
-                ip.ipAddr = "0.0.0.0"
+            if ip.pid == self.workflow_config["PID"]:
+                ip.ip_addr = "0.0.0.0"
 
-        party_config = json.dumps([f"{k.PID}:{k.ipAddr}:9000" for k in ips])
+        party_config = json.dumps([f"{k.pid}:{k.ip_addr}:9000" for k in ips])
         self.app.logger.info(f"Party Config: {party_config}")
 
         # return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
@@ -212,22 +145,23 @@ class Party:
         then just grab a file from that location with a .json extension instead of
         .csv, since we ensure it exists when we upload the dataset.
         """
-        workflow = get_workflow_by_name(self.workflow_config["workflow_name"])
+        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
+                                                            self.workflow_config["dataset_id"])
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": f"{str(workflow.fixedPoint).lower()}",
+            "USE_FLOATS": f"{str(workflow.fixed_point).lower()}",
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": workflow.ZP,
-            "FP_USE": f"{str(workflow.fixedPoint).lower()}",
-            "FP_DECIMAL": workflow.decimalDigits,
-            "FP_INTEGER": workflow.integerDigits,
-            "NN_USE": f"{str(workflow.negativeNumber).lower()}",
-            "BN_USE": f"{str(workflow.bigNumber).lower()}"
+            "ZP": workflow.zp,
+            "FP_USE": f"{str(workflow.fixed_point).lower()}",
+            "FP_DECIMAL": workflow.decimal_digits,
+            "FP_INTEGER": workflow.integer_digits,
+            "NN_USE": f"{str(workflow.negative_number).lower()}",
+            "BN_USE": f"{str(workflow.big_number).lower()}"
         }
         self.app.logger.info(f"Data {data}")
 

@@ -12,7 +12,7 @@ def get_running_workflows():
 
 
 def get_ips(workflow_name):
-    ips = Pod.query.filter(Pod.workflowName == workflow_name).all()
+    ips = Pod.query.filter(Pod.workflow_name == workflow_name).all()
     db.session.commit()
     app.logger.info(f"Ips {ips} ")
     app.logger.info(f"Ips length: {len(ips)} ")
@@ -20,35 +20,42 @@ def get_ips(workflow_name):
 
 
 def get_jiff_server_by_workflow(workflow_name):
-    jiff_server = JiffServer.query.filter(JiffServer.workflowName == workflow_name).first()
+    jiff_server = JiffServer.query.filter(JiffServer.workflow_name == workflow_name).first()
     db.session.commit()
     app.logger.info(f"Jiff Server {jiff_server} ")
     return jiff_server
 
 
 def get_pod_by_workflow_and_pid(workflow_name, pid):
-    pods = Pod.query.filter(and_(Pod.workflowName == workflow_name, Pod.PID == pid)).first()
+    pods = Pod.query.filter(and_(Pod.workflow_name == workflow_name, Pod.pid == pid)).all()
     db.session.commit()
     app.logger.info(f"Pods {pods} ")
     return pods
 
 
-def get_workflow_by_name(workflow_name):
-    workflow = Workflow.query.filter(Workflow.workflowName == workflow_name).first()
+def get_workflow_by_operation_and_dataset_id(operation, dataset_id):
+    workflow = Workflow.query.filter(and_(Workflow.operation == operation, Workflow.dataset_id == dataset_id)).first()
+    db.session.commit()
+    app.logger.info(f"Workflow {workflow} ")
+    return workflow
+
+
+def get_workflow_by_source_key(source_key):
+    workflow = Workflow.query.filter(Workflow.source_key == source_key).first()
     db.session.commit()
     app.logger.info(f"Workflow {workflow} ")
     return workflow
 
 
 def get_dataset_by_id_and_pid(dataset_id, pid):
-    dataset = Dataset.query.filter(and_(Dataset.datasetId == dataset_id, Dataset.PID == pid)).first()
+    dataset = Dataset.query.filter(and_(Dataset.dataset_id == dataset_id, Dataset.pid == pid)).first()
     db.session.commit()
     app.logger.info(f"Dataset Server {dataset} ")
     return dataset
 
 
 def workflow_exists(workflow_name):
-    workflow = JiffServer.query.filter(JiffServer.workflowName == workflow_name).first()
+    workflow = JiffServer.query.filter(JiffServer.workflow_name == workflow_name).first()
     db.session.commit()
     exists = workflow is not None
     app.logger.info(f"Workflow Exists: {exists} ")
@@ -56,7 +63,7 @@ def workflow_exists(workflow_name):
 
 
 def dataset_exists(dataset_id, pid):
-    dataset = Dataset.query.filter(and_(Dataset.datasetId == dataset_id, Dataset.PID == pid)).first()
+    dataset = Dataset.query.filter(and_(Dataset.dataset_id == dataset_id, Dataset.pid == pid)).first()
     db.session.commit()
     exists = dataset is not None
 
@@ -64,8 +71,8 @@ def dataset_exists(dataset_id, pid):
     return exists
 
 
-def save_dataset(dataset_id, source_bucket, source_key, PID):
-    dataset = Dataset(dataset_id, source_bucket, source_key, PID)
+def save_dataset(dataset_id, source_bucket, source_key, pid):
+    dataset = Dataset(dataset_id, source_bucket, source_key, pid)
     db.session.add(dataset)
     db.session.commit()
 
@@ -76,8 +83,10 @@ def save_pod(workflow_name, from_pid, ip_addr):
     db.session.commit()
 
 
-def save_workflow(workflow_name, bigNumber, fixedPoint, decimalDigits, integerDigits, negativeNumber, ZP):
-    workflow = Workflow(workflow_name, bigNumber, fixedPoint, decimalDigits, integerDigits, negativeNumber, ZP)
+def save_workflow(source_key, source_bucket, operation, dataset_id,
+                  big_number, fixed_point, decimal_digits, integer_digits, negative_number, zp):
+    workflow = Workflow(source_key, source_bucket, operation, dataset_id,
+                        big_number, fixed_point, decimal_digits, integer_digits, negative_number, zp)
     db.session.add(workflow)
     db.session.commit()
 

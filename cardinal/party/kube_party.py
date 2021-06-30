@@ -5,7 +5,7 @@ import pystache
 import time
 import yaml
 
-from cardinal.database.queries import get_dataset_by_id_and_pid
+from cardinal.database.queries import get_dataset_by_id_and_pid, get_workflow_by_operation_and_dataset_id
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
 from kubernetes import client as k_client
@@ -57,15 +57,22 @@ class KubeParty(Party):
         return yaml.safe_load(pod_rendered), yaml.safe_load(service_rendered)
 
     def build_pod_spec(self):
+        # pull dataset info for source bucket and key
         dataset = get_dataset_by_id_and_pid(self.workflow_config['dataset_id'], self.workflow_config['PID'])
+
+        # pull dataset info for source bucket and key of workflow
+        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
+                                                            self.workflow_config["dataset_id"])
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
             "INFRA": "AWS",
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
-            "SOURCE_BUCKET": dataset.sourceBucket,
-            "SOURCE_KEY": dataset.sourceKey,
+            "SOURCE_BUCKET": dataset.source_bucket,
+            "SOURCE_KEY": dataset.source_key,
             "WRITE_PATH": "/data/inpt.csv",
+            "PROTOCOL_BUCKET": workflow.source_bucket,
+            "PROTOCOL_KEY": workflow.source_key,
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
@@ -102,13 +109,13 @@ class KubeParty(Party):
                      'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
-        protocol_tmpl = open(f"{self.templates_directory}/congregation/protocol.tmpl", 'r').read()
-        encoded_protocol = base64.b64encode(bytes(pystache.render(protocol_tmpl, {}), 'utf-8'))
+        # switch this our to use the database
+
+
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
             "WORKFLOW_NAME": self.workflow_config['workflow_name'],
-            "PROTOCOL": encoded_protocol,
             "CONG_CONFIG": encoded_config,
             "CURIA_CONFIG": encoded_creds
         }
