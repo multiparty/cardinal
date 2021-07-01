@@ -63,6 +63,7 @@ class KubeParty(Party):
         # pull dataset info for source bucket and key of workflow
         workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
                                                             self.workflow_config["dataset_id"])
+        write_path = dataset.source_key.split("/")[-1]
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
@@ -70,7 +71,7 @@ class KubeParty(Party):
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
             "SOURCE_BUCKET": dataset.source_bucket,
             "SOURCE_KEY": dataset.source_key,
-            "WRITE_PATH": "/data/inpt.csv",
+            "WRITE_PATH": f"/data/{write_path}",
             "PROTOCOL_BUCKET": workflow.source_bucket,
             "PROTOCOL_KEY": workflow.source_key,
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
