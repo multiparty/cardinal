@@ -110,9 +110,6 @@ class KubeParty(Party):
                      'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
-        # switch this our to use the database
-
-
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",

@@ -2,10 +2,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:password@34.106.116.233:3306/cardinal'
+# TODO Example string change for your databases
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:password@ip:port/database'
 db = SQLAlchemy(app)
 
-
+"""
+SQLALchemy works by searching for classes with db.Model and turning them into tables.
+The tables are automatically created if they do not exist but are not automatically updated if changed
+"""
 class Dataset(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dataset_id = db.Column(db.String(150))

@@ -30,6 +30,8 @@ def index():
 
 @app.route("/api/setup_db_conn", methods=["POST"])
 def setup_db_conn():
+    # TODO update so DB does not have to be hard coded
+    # Currently DB is hardcoded
     """
     {
         db_ip = "127.0.0.1"
@@ -79,6 +81,17 @@ def submit():
 
 @app.route("/api/start_jiff_server", methods=["POST"])
 def start_jiff_server():
+    """
+            request looks like:
+            {
+                "workflow_name": "test-workflow",
+                "dataset_id": "HRI107",
+                "operation": "std-dev",
+                "PID": 1
+                "other_cardinals": [(2, "23.45.67.89"), (3, "34.56.78.90")],
+                "jiff_server": "45.67.89.01"
+            }
+    """
     if request.method == "POST":
 
         req = request.get_json(force=True)
@@ -106,12 +119,11 @@ def start_jiff_server():
 
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
-            # Add entry to get_running_jobs() so that we can access that orchestrator later on
-            # get_running_jobs()[req['workflow_name']] = orch
 
             # TODO move this out so its not a hanging object
             jiff_ip = orch.start_jiff_server()
 
+            # Save server to database for lookup later
             save_jiff_server(req["workflow_name"], jiff_ip)
 
             response = {
@@ -126,9 +138,7 @@ def submit_ip_address():
     """
     cardinal instances will use this endpoint to transmit the IP address
     that they have selected for the compute pod they intend to launch for
-    a given workflow. once cardinal receives a message of this type, it
-    fetches the orchestrator from it's get_running_jobs() record, and updates
-    it's other_pod_ips record.
+    a given workflow. .
     """
 
     if request.method == "POST":
@@ -145,7 +155,7 @@ def submit_ip_address():
         if workflow_exists(req["workflow_name"]):
             """
             if this IP information is legitimate, fetch the corresponding 
-            orchestrator and update its other_pod_ips record
+            orchestrator and save to the database
             """
 
             app.logger.info(
@@ -161,8 +171,7 @@ def submit_ip_address():
             }
         else:
             """
-            if the workflow_name doesn't resolve to a running orchestrator,
-            return an error message
+            if the workflow_name does not exist in the database
             """
 
             app.logger.error(
@@ -179,33 +188,23 @@ def submit_ip_address():
 
 @app.route("/api/submit_workflow", methods=["POST"])
 def submit_workflow():
-    """
-   data = {
-            source_key = db.Column(db.String(150), primary_key=True)
-            source_bucket = db.Column(db.String(150)
-            operation = db.Column(db.String(150)
-            dataset_id = db.Column(db.String(150)
-            bigNumber = db.Column(db.Boolean)
-            fixedPoint = db.Column(db.Boolean)
-            decimalDigits = db.Column(db.Integer)
-            integerDigits = db.Column(db.Integer)
-            negativeNumber = db.Column(db.Boolean)
-            ZP = db.Column(db.Boolean)
-        }
-    """
+    # Submit a workflow to the database to be used later on a data set
 
     if request.method == "POST":
         # TODO Document
         """
         request could look like:
         {
-            "workflow_name": "test-workflow",   # name of relevant workflow
+            "source_key": "HRIO/workflow/std_dev_HRI0.py",   # name of relevant workflow
+            "source_bucket": HRI0, 
+            "operation": stv_dev, 
+            "dataset_id": HRI0, 
             "big_number": true, 
-            "fixed_point": false, 
+            "fixed_Noint": true, 
             "decimal_digits": 2, 
-            "integer_digits": 2, 
-            "negative_number": true, 
-            "zp": false, 
+            "integer_digits": 2,
+            "negative_number": 2,
+            "zp: : true
             
         }
         """
@@ -213,14 +212,12 @@ def submit_workflow():
         req = request.get_json(force=True)
         if get_workflow_by_source_key(req["source_key"]) is not None:
             """
-            if this IP information is legitimate, fetch the corresponding 
-            orchestrator and update its other_pod_ips record
+            Check if the workflow exists and do no insert if it is no unique
             """
 
             app.logger.error(
                 f"Error saving workflow, workflow already exists. (Try running workflow complete) "
             )
-            # insert ips into database
 
             response = {
                 "MSG": f"ERR: Workflow {req['source_key']} already exists."
@@ -259,9 +256,9 @@ def submit_dataset():
         """
         request could look like:
         {
-            "dataset_id": "test-workflow",   # name of relevant workflow
-            "source_bucket": some source,                   
-            "source_key": some key, 
+            "dataset_id": "HRI0",   # name of relevant workflow
+            "source_bucket": "HRI0",                   
+            "source_key": "HRIO/workflow/std_dev_HRI0.py", 
             "pid": 2, 
 
         }
@@ -347,6 +344,7 @@ def workflow_complete():
 
 @app.route("/api/status", methods=["POST"])
 def get_status():
+    # TODO tie this in with requests that can fetch the status of the pod from the cluster
     """
     Returns the status of the pod.
     """

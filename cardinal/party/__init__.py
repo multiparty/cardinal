@@ -59,9 +59,9 @@ class Party:
 
     def _exchange_ips(self):
         """
-        iterates over entries in self.other_pod_ips, and terminates only when we
-        have both received all the other pod's IP addresses from the other cardinal
-        servers and those cardinal servers have received ours
+        Assumes we have 3 parties to a computation.
+        Submits its compute ip to the database
+        Waits for other to submit theirs and proceeds when all are found.
         """
 
         # TODO should add better error checking and not assume 3 ip entries == 3 other cardinals
@@ -89,13 +89,13 @@ class Party:
 
         This function takes something like the following:
         {
-            1: xx.xx.xx.xx:9001,
-            2: yy.yy.yy.yy:9002,
-            3: zz.zz.zz.zz:9003
+            1: xx.xx.xx.xx:9000,
+            2: yy.yy.yy.yy:9000,
+            3: zz.zz.zz.zz:9000
         }
 
         And produces:
-        ["1:xx.xx.xx.xx:9001", "2:yy.yy.yy.yy:9002", "3:zz.zz.zz.zz:9003"]
+        ["1:xx.xx.xx.xx:9000", "2:yy.yy.yy.yy:9000", "3:zz.zz.zz.zz:9000"]
 
         Which is just the format that the congregation config file uses for IP addresses
         of the other compute parties.
@@ -108,8 +108,6 @@ class Party:
 
         party_config = json.dumps([f"{k.pid}:{k.ip_addr}:9000" for k in ips])
         self.app.logger.info(f"Party Config: {party_config}")
-
-        # return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
         return party_config
 
     def build_congregation_config(self):
