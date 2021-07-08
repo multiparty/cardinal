@@ -7,7 +7,7 @@ from flask_cors import CORS
 from cardinal.database import app
 from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, \
     save_workflow, delete_entry, get_jiff_server_by_workflow, dataset_exists, save_dataset, \
-    get_pod_by_workflow_and_pid, get_workflow_by_source_key
+    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid
 from cardinal import Orchestrator
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -191,7 +191,6 @@ def submit_workflow():
     # Submit a workflow to the database to be used later on a data set
 
     if request.method == "POST":
-        # TODO Document
         """
         request could look like:
         {
@@ -200,7 +199,7 @@ def submit_workflow():
             "operation": stv_dev, 
             "dataset_id": HRI0, 
             "big_number": true, 
-            "fixed_Noint": true, 
+            "fixed_point": true, 
             "decimal_digits": 2, 
             "integer_digits": 2,
             "negative_number": 2,
@@ -252,7 +251,6 @@ def submit_dataset():
     """
 
     if request.method == "POST":
-        # TODO Document
         """
         request could look like:
         {
@@ -284,6 +282,91 @@ def submit_dataset():
             save_dataset(req['dataset_id'], req['source_bucket'], req['source_key'], req['PID'])
             response = {
                 "MSG": "OK"
+            }
+
+        return jsonify(response)
+
+
+@app.route("/api/delete_dataset", methods=["POST"])
+def delete_dataset():
+    """
+   data = {
+        datasetId = db.Column(db.String(150))
+        PID = db.Column(db.Integer)
+        }
+    """
+
+    if request.method == "POST":
+        """
+        request could look like:
+        {
+            "dataset_id": "HRI0",   # name of relevant workflow
+            "pid": 2, 
+
+        }
+        """
+
+        req = request.get_json(force=True)
+        dataset = get_dataset_by_id_and_pid(req["dataset_id"], req['PID'])
+        if dataset is not None:
+
+            delete_entry(dataset)
+            app.logger.info(
+                f"Deleted dataset {req['dataset_id']}for party {req['PID']}"
+            )
+
+            response = {
+                "MSG": "OK"
+            }
+        else:
+
+            app.logger.error(
+                f"Error deleting dataset {req['dataset_id']}"
+            )
+
+            response = {
+                "MSG": "Error deleting dataset"
+            }
+
+        return jsonify(response)
+
+
+@app.route("/api/delete_workflow", methods=["POST"])
+def delete_workflow():
+    # Submit a workflow to the database to be used later on a data set
+
+    if request.method == "POST":
+        """
+        request could look like:
+        {
+            "source_key": "HRIO/workflow/std_dev_HRI0.py",   # name of relevant workflow
+        }
+        """
+
+        req = request.get_json(force=True)
+        workflow = get_workflow_by_source_key(req["source_key"])
+        if workflow is not None:
+            """
+            Check if the workflow exists and if so then delete
+            """
+            delete_entry(workflow)
+
+            app.logger.info(
+                f"Deleted workflow {req['source_key']}"
+            )
+
+            response = {
+                "MSG": "OK"
+            }
+
+        else:
+
+            app.logger.error(
+                f"Error deleting workflow, workflow does not exist. "
+            )
+
+            response = {
+                "MSG": f"ERR: Workflow {req['source_key']} does not exist."
             }
 
         return jsonify(response)
