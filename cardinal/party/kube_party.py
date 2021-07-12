@@ -1,10 +1,11 @@
 import base64
+import datetime
 import json
 import os
 import pystache
 import time
 import yaml
-import datetime
+from cardinal.database.queries import get_dataset_by_id_and_pid, get_workflow_by_operation_and_dataset_id
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
 from kubernetes import client as k_client
@@ -31,7 +32,7 @@ class KubeParty(Party):
                 for event in w.stream(self.kube_client.list_namespaced_pod, _request_timeout=60, namespace="default"):
                     self.app.logger.info(f"New Pod Event: {event['type']}, {event['object'].metadata.name}")
                     if event['object'].metadata.name == f"{self.spec_prefix}-pod" and (event['type'].lower() == 'succeeded' or event['object'].status.phase.lower()=='succeeded'):
-                        
+
                         self.app.logger.info("Pod Succeeded")
                         self.add_event_dict({
                             'PID': self.workflow_config['PID'],
@@ -81,14 +82,23 @@ class KubeParty(Party):
         return yaml.safe_load(pod_rendered), yaml.safe_load(service_rendered)
 
     def build_pod_spec(self):
+        # pull dataset info for source bucket and key
+        dataset = get_dataset_by_id_and_pid(self.workflow_config['dataset_id'], self.workflow_config['PID'])
+
+        # pull dataset info for source bucket and key of workflow
+        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
+                                                            self.workflow_config["dataset_id"])
+        write_path = dataset.source_key.split("/")[-1]
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
             "INFRA": "AWS",
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
-            "SOURCE_BUCKET": os.environ.get("SOURCE_BUCKET"),
-            "SOURCE_KEY": os.environ.get("SOURCE_KEY"),
-            "WRITE_PATH": "/data/inpt.csv",
+            "SOURCE_BUCKET": dataset.source_bucket,
+            "SOURCE_KEY": dataset.source_key,
+            "WRITE_PATH": f"/data/{write_path}",
+            "PROTOCOL_BUCKET": workflow.source_bucket,
+            "PROTOCOL_KEY": workflow.source_key,
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
@@ -125,13 +135,10 @@ class KubeParty(Party):
                      'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
-        protocol_tmpl = open(f"{self.templates_directory}/congregation/protocol.tmpl", 'r').read()
-        encoded_protocol = base64.b64encode(bytes(pystache.render(protocol_tmpl, {}), 'utf-8'))
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
             "WORKFLOW_NAME": self.workflow_config['workflow_name'],
-            "PROTOCOL": encoded_protocol,
             "CONG_CONFIG": encoded_config,
             "CURIA_CONFIG": encoded_creds
         }
@@ -163,7 +170,7 @@ class KubeParty(Party):
             return ip_address
         else:
             self.app.logger.error("Failed to get compute ip address")
-            
+
     def launch_pod(self, pod_body):
         try:
             api_response = self.kube_client.create_namespaced_pod("default", body=pod_body, pretty='true')
@@ -293,14 +300,13 @@ class KubeParty(Party):
                 self.app.logger.info("JIFF Pod deleted successfully with response: \n{}\n".format(api_response))
             except ApiException as e:
                 self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
-        
+
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
                 'event': 'Worfkflow stopped',
                 'time': datetime.datetime.now()
             })
-
 
     def get_pod_status(self):
         try:

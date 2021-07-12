@@ -2,9 +2,12 @@ import json
 import pystache
 import os
 import requests
+import time
+
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id
+from cardinal.handlers.handler import Handler
 import datetime
 from cardinal.handlers.handler import Handler
-import time
 
 """
 TODO: 
@@ -35,15 +38,16 @@ class Party:
         pass
 
     def _initialize_other_ips(self):
-        """
-        we want a dictionary where each entry is like PID: <IP>:<PORT>, with a unique port for each
-        compute party. The way I'm doing a unique port is just 9000 + PID, so like 9001, 9002, etc.
-
-        I'm setting the ip:port entries for each other compute party to None, because we haven't
-        actually exchanged IP addresses yet.
-        """
+        # """
+        # we want a dictionary where each entry is like PID: <IP>:<PORT>, with a unique port for each
+        # compute party. The way I'm doing a unique port is just 9000 + PID, so like 9001, 9002, etc.
+        #
+        # I'm setting the ip:port entries for each other compute party to None, because we haven't
+        # actually exchanged IP addresses yet.
+        # """
 
         # self entry
+
         ret = {
             int(self.workflow_config["PID"]): {
                 "IP_PORT": "0.0.0.0:9000",
@@ -60,72 +64,22 @@ class Party:
 
         return ret
 
-    def _check_ip_records(self):
-        """
-        Look at our record of other parties' compute pod IP addresses,
-        return PIDs of any parties whose entries are still incomplete.
-        """
-
-        incomplete = []
-        for other_party in self.other_compute_ips.keys():
-            if not self.other_compute_ips[other_party]["IP_PORT"]:
-                incomplete.append(other_party)
-
-        return incomplete
-
-    def _check_ip_record_acks(self):
-
-        un_acked = []
-        for other_party in self.other_compute_ips.keys():
-            if not self.other_compute_ips[other_party]["ACKED"]:
-                un_acked.append(other_party)
-
-        return un_acked
-
     def _exchange_ips(self):
         """
-        iterates over entries in self.other_pod_ips, and terminates only when we
-        have both received all the other pod's IP addresses from the other cardinal
-        servers and those cardinal servers have received ours
+        Assumes we have 3 parties to a computation.
+        Submits its compute ip to the database
+        Waits for other to submit theirs and proceeds when all are found.
         """
 
-        all_ips_received = False
-        all_parties_acked = False
-        while self.running and (not all_ips_received or not all_parties_acked):
+        # TODO should add better error checking and not assume 3 ip entries == 3 other cardinals
+        save_pod(self.workflow_config["workflow_name"], self.workflow_config["PID"], self.this_compute_ip)
+        ips = get_ips(self.workflow_config["workflow_name"])
+        while self.running and workflow_exists(self.workflow_config["workflow_name"]) \
+                and (len(ips) < 3):
+            ips = get_ips(self.workflow_config["workflow_name"])
 
-            for other_party in self.workflow_config["other_cardinals"]:
-
-                if not self.other_compute_ips[other_party[0]]["ACKED"]:
-                    # if we haven't received a message from this party indicating
-                    # that they've received our pod IP information, then we send
-                    # them that information
-                    req = {
-                        "workflow_name": self.workflow_config["workflow_name"],
-                        "from_pid": self.workflow_config["PID"],
-                        "pod_ip_address": self.this_compute_ip
-                    }
-
-                    dest_server = other_party[1]
-                    resp = requests.post(f"{dest_server}/api/submit_ip_address", json=req).json()
-                    self.app.logger.info(f"Submitted IP address to {dest_server} and got response: \n{resp}")
-
-                    if resp["MSG"] == "OK":
-                        self.other_compute_ips[other_party[0]]["ACKED"] = True
-
-            incomplete_parties = self._check_ip_records()
-            incomplete_acks = self._check_ip_record_acks()
-
-            if incomplete_parties:
-                self.app.logger.info(f"Waiting for IP information from the following parties: {incomplete_parties}")
-            else:
-                all_ips_received = True
-
-            if incomplete_acks:
-                self.app.logger.info(f"Waiting for IP acks from the following parties: {incomplete_acks}")
-            else:
-                all_parties_acked = True
-
-            time.sleep(1)
+            # TODO store into compute ips
+            time.sleep(3)
 
     def _build_all_pids_list(self):
 
@@ -142,18 +96,26 @@ class Party:
 
         This function takes something like the following:
         {
-            1: xx.xx.xx.xx:9001,
-            2: yy.yy.yy.yy:9002,
-            3: zz.zz.zz.zz:9003
+            1: xx.xx.xx.xx:9000,
+            2: yy.yy.yy.yy:9000,
+            3: zz.zz.zz.zz:9000
         }
 
         And produces:
-        ["1:xx.xx.xx.xx:9001", "2:yy.yy.yy.yy:9002", "3:zz.zz.zz.zz:9003"]
+        ["1:xx.xx.xx.xx:9000", "2:yy.yy.yy.yy:9000", "3:zz.zz.zz.zz:9000"]
 
         Which is just the format that the congregation config file uses for IP addresses
         of the other compute parties.
         """
-        return json.dumps([f"{k}:{self.other_compute_ips[k]['IP_PORT']}" for k in self.other_compute_ips.keys()])
+
+        ips = get_ips(self.workflow_config["workflow_name"])
+        for ip in ips:
+            if ip.pid == self.workflow_config["PID"]:
+                ip.ip_addr = "0.0.0.0"
+
+        party_config = json.dumps([f"{k.pid}:{k.ip_addr}:9000" for k in ips])
+        self.app.logger.info(f"Party Config: {party_config}")
+        return party_config
 
     def build_congregation_config(self):
         """
@@ -188,26 +150,29 @@ class Party:
         then just grab a file from that location with a .json extension instead of
         .csv, since we ensure it exists when we upload the dataset.
         """
-
+        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
+                                                            self.workflow_config["dataset_id"])
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": "false",   # TODO - will eventually be configurable, hardcoded fine for now
+            "USE_FLOATS": f"{str(workflow.fixed_point).lower()}",
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": 16777729,        # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_DECIMAL": 1,       # TODO - will eventually be configurable, hardcoded fine for now
-            "FP_INTEGER": 1,       # TODO - will eventually be configurable, hardcoded fine for now
-            "NN_USE": "false",       # TODO - will eventually be configurable, hardcoded fine for now
-            "BN_USE": "false"        # TODO - will eventually be configurable, hardcoded fine for now
+            "ZP": workflow.zp,
+            "FP_USE": f"{str(workflow.fixed_point).lower()}",
+            "FP_DECIMAL": workflow.decimal_digits,
+            "FP_INTEGER": workflow.integer_digits,
+            "NN_USE": f"{str(workflow.negative_number).lower()}",
+            "BN_USE": f"{str(workflow.big_number).lower()}"
         }
+        self.app.logger.info(f"Data {data}")
 
         rendered = pystache.render(template, data)
         self.specs["CONGREGATION_CONFIG"] = rendered
+        self.app.logger.info(f"Data Rendered {rendered}")
 
     def fetch_available_ip_address(self):
         return self.handler.fetch_available_ip_address()

@@ -25,6 +25,10 @@ spec:
           value: {{SOURCE_KEY}}
         - name: WRITE_PATH
           value: {{WRITE_PATH}}
+        - name: PROTOCOL_BUCKET
+          value: {{PROTOCOL_BUCKET}}
+        - name: PROTOCOL_KEY
+          value: {{PROTOCOL_KEY}}
         - name: DESTINATION_BUCKET
           value: {{DESTINATION_BUCKET}}
       volumeMounts:
@@ -43,8 +47,6 @@ spec:
             path: workflow
           - key: config_encoded
             path: config
-          - key: protocol_encoded
-            path: protocol
           - key: curia_config_encoded
             path: curia_config
   restartPolicy: OnFailure
