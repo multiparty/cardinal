@@ -8,9 +8,7 @@ spec:
   selector:
     app: {{POD_NAME}}
   type: LoadBalancer
-  loadBalancerIP: {{SERVICE_IP}}
   ports:
     - protocol: TCP
       port: {{SERVICE_PORT}}
       targetPort: {{SERVICE_PORT}}
-      nodePort: {{NODE_PORT}}
