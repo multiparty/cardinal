@@ -83,6 +83,25 @@ class JiffServer(db.Model):
     def __repr__(self):
         return '<Jiff ip %r>' % self.ip_addr
 
+class PodEventTimestamp(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_name = db.Column(db.String(150))
+    pid = db.Column(db.Integer)
+    jiff_server_launched = db.Column(db.Time)
+    service_ip_retrieved = db.Column(db.Time)
+    exchanged_ips = db.Column(db.Time)
+    built_specs_configs = db.Column(db.Time)
+    launched_config = db.Column(db.Time)
+    launched_pod = db.Column(db.Time)
+    pod_succeeded = db.Column(db.Time)
+    workflow_stopped = db.Column(db.Time)
+
+    def __init__(self, workflow_name, pid):
+        self.workflow_name = workflow_name
+        self.pid = pid
+
+    def __repr__(self):
+        return '<Pod id %r>' % self.pid
 
 db.create_all()
 db.session.commit()

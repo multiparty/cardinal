@@ -4,7 +4,7 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id, update_pod_event_timestamp
 from cardinal.handlers.handler import Handler
 import datetime
 from cardinal.handlers.handler import Handler
@@ -27,7 +27,7 @@ class Party:
         self.running = True
         self.event_timestamps = [] # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
         if os.environ.get('PROFILE') and os.environ.get('PROFILE').lower() == 'true':
-            self.PROFILE = True 
+            self.PROFILE = True
         else:
             self.PROFILE = False
 
@@ -109,11 +109,7 @@ class Party:
         """
 
         ips = get_ips(self.workflow_config["workflow_name"])
-        for ip in ips:
-            if ip.pid == self.workflow_config["PID"]:
-                ip.ip_addr = "0.0.0.0"
-
-        party_config = json.dumps([f"{k.pid}:{k.ip_addr}:9000" for k in ips])
+        party_config = json.dumps([f"{k.pid}:{k.ip_addr}:9000" if k.pid != self.workflow_config["PID"] else f"{k.pid}:0.0.0.0:9000" for k in ips])
         self.app.logger.info(f"Party Config: {party_config}")
         return party_config
 
@@ -194,4 +190,7 @@ class Party:
                 'time': ... # datetime.datetime.now()
             }
         """
-        self.event_timestamps.append(event_dict)
+        update_pod_event_timestamp(self.workflow_config['workflow_name'],
+                                        event_dict['PID'],
+                                        event_dict['event'],
+                                        event_dict['time'])

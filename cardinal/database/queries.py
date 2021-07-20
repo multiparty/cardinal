@@ -1,6 +1,6 @@
 from sqlalchemy import and_
 
-from cardinal.database import Workflow, Pod, JiffServer, app, Dataset
+from cardinal.database import Workflow, Pod, JiffServer, app, Dataset, PodEventTimestamp
 from cardinal.database import db
 
 
@@ -100,3 +100,24 @@ def save_jiff_server(workflow_name, ip_addr):
 def delete_entry(entry):
     db.session.delete(entry)
     db.session.commit()
+
+def save_pod_event_timestamp(workflow_name,pid):
+    obj = PodEventTimestamp(workflow_name, pid)
+    db.session.add(obj)
+    db.session.commit()
+
+def update_pod_event_timestamp(workflow_name,pid,event,timestamp):
+    obj = db.session.query(PodEventTimestamp) \
+                .filter(and_(PodEventTimestamp.workflow_name == workflow_name, PodEventTimestamp.pid == pid)) \
+                .first() 
+
+    setattr(obj,event,timestamp)
+    
+    app.logger.info(f"updating pod time stamp object of pid {pid} - event : {event}")
+    db.session.commit()
+
+def get_pod_event_timestamp_by_workflow_and_pid(workflow_name,pid):
+    obj = PodEventTimestamp.query.filter(and_(PodEventTimestamp.workflow_name == workflow_name, PodEventTimestamp.pid == pid)).first()
+    db.session.commit()
+    app.logger.info(f"Pod event timestamps {obj} ")
+    return obj

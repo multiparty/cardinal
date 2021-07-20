@@ -36,7 +36,7 @@ class KubeParty(Party):
                         self.app.logger.info("Pod Succeeded")
                         self.add_event_dict({
                             'PID': self.workflow_config['PID'],
-                            'event': 'Pod succeeded',
+                            'event': 'pod_succeeded',
                             'time': datetime.datetime.now()
                         })
                         w.stop()
@@ -57,7 +57,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Jiff server launched',
+                'event': 'jiff_server_launched',
                 'time': datetime.datetime.now()
             })
 
@@ -210,7 +210,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Got service ip',
+                'event': 'service_ip_retrieved',
                 'time': datetime.datetime.now()
             })
 
@@ -219,7 +219,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Exchanged ips',
+                'event': 'exchanged_ips',
                 'time': datetime.datetime.now()
             })
 
@@ -230,7 +230,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Built specs and configs',
+                'event': 'built_specs_configs',
                 'time': datetime.datetime.now()
             })
 
@@ -250,7 +250,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Launched config map',
+                'event': 'launched_config',
                 'time': datetime.datetime.now()
             })
 
@@ -259,7 +259,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Launched pod',
+                'event': 'launched_pod',
                 'time': datetime.datetime.now()
             })
 
@@ -304,7 +304,7 @@ class KubeParty(Party):
         if self.PROFILE:
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
-                'event': 'Worfkflow stopped',
+                'event': 'workflow_stopped',
                 'time': datetime.datetime.now()
             })
 

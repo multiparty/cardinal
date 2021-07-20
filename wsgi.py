@@ -8,7 +8,7 @@ from flask_cors import CORS
 from cardinal.database import app
 from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, \
     save_workflow, delete_entry, get_jiff_server_by_workflow, dataset_exists, save_dataset, \
-    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid
+    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid, save_pod_event_timestamp, get_pod_event_timestamp_by_workflow_and_pid
 from cardinal import Orchestrator
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -61,6 +61,11 @@ def submit():
         # if req['PID'] == 1:
         if workflow_exists(req["workflow_name"]):
             orch = Orchestrator(req, app, len(get_running_workflows()))
+
+            # save in pod event time stamp for party 2 and 3
+            if req['PID'] != 1:
+                save_pod_event_timestamp(req['workflow_name'],req['PID'])
+
             orch.run()
 
             response = {
@@ -120,6 +125,9 @@ def start_jiff_server():
 
             app.logger.info(f"Adding workflow with name {req['workflow_name']} to running jobs.")
             app.logger.info(f"Starting JIFF server for workflow: {req['workflow_name']}.")
+
+            # save in pod event time stamp for party 1
+            save_pod_event_timestamp(req['workflow_name'],1)
 
             # TODO move this out so its not a hanging object
             jiff_ip = orch.start_jiff_server()
@@ -410,9 +418,16 @@ def workflow_complete():
             orch.stop_workflow()
 
             app.logger.info(f"Workflow {req['workflow_name']} complete, removed from running jobs.")
+
+            event_timestamps = get_pod_event_timestamp_by_workflow_and_pid(req['workflow_name'],req['PID'])
+            if event_timestamps is not None:
+                delete_entry(event_timestamps)
+
+            event_timestamps_dict = {x.name: str(getattr(event_timestamps, x.name)) for x in event_timestamps.__table__.columns}
+
             response = {
                 "MSG": "OK",
-                "timestamps": event_timestamps
+                "timestamps": event_timestamps_dict
             }
         else:
 
