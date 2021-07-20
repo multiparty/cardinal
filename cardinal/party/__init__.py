@@ -4,7 +4,7 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id, update_pod_event_timestamp
 from cardinal.handlers.handler import Handler
 import datetime
 from cardinal.handlers.handler import Handler
@@ -194,4 +194,7 @@ class Party:
                 'time': ... # datetime.datetime.now()
             }
         """
-        self.event_timestamps.append(event_dict)
+        update_pod_event_timestamp(self.workflow_config['workflow_name'],
+                                        event_dict['PID'],
+                                        event_dict['event'],
+                                        event_dict['time'])
