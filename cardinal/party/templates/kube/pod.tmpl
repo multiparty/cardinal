@@ -31,6 +31,10 @@ spec:
           value: {{PROTOCOL_KEY}}
         - name: DESTINATION_BUCKET
           value: {{DESTINATION_BUCKET}}
+        - name: STORAGE_ACCOUNT
+          value: {{STORAGE_ACCOUNT}}
+        - name: WORKFLOW_NAME
+          value: {{WORKFLOW_NAME}}
       volumeMounts:
         - name: data-volume
           mountPath: /data
@@ -43,8 +47,6 @@ spec:
       configMap:
         name: {{CONFIGMAP_NAME}}
         items:
-          - key: workflow
-            path: workflow
           - key: config_encoded
             path: config
           - key: curia_config_encoded
