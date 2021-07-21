@@ -15,6 +15,7 @@ ENV CLOUD_PROVIDER="AKS"
 ENV SUB_ID="117fb10b-a7ba-43ab-9a0d-2a55ccd9db87"
 ENV RESOURCE_GROUP_NAME="mc_cardinal_cardinal_eastus"
 ENV LOCATION="eastus"
+ENV CONGREGATION="docker.io/hicsail/congregation-jiff:latest"
 
 # profile flag - set to "true" to receive profiling timestamps with each workflow
 ENV PROFILE="false"
@@ -23,9 +24,6 @@ ENV PROFILE="false"
 ENV AWS_REGION=""
 ENV AWS_ACCESS_KEY_ID=""
 ENV AWS_SECRET_ACCESS_KEY=""
-
-ENV SOURCE_BUCKET=""
-ENV SOURCE_KEY=""
 ENV DESTINATION_BUCKET=""
 
 

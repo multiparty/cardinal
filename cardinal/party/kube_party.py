@@ -91,7 +91,7 @@ class KubeParty(Party):
         write_path = dataset.source_key.split("/")[-1]
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
-            "CONG_IMG_PATH": "docker.io/hicsail/congregation-jiff:latest",
+            "CONG_IMG_PATH": os.environ.get("CONGREGATION"),
             "INFRA": "AWS",
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
             "SOURCE_BUCKET": dataset.source_bucket,

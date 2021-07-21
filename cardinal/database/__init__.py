@@ -1,9 +1,13 @@
+import os
+from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 
+load_dotenv()
 app = Flask(__name__)
 # TODO Example string change for your databases
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:password@ip:port/database'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{os.environ.get("MYSQL_USER")}:{os.environ.get("MYSQL_PASSWORD")}' \
+    f'@{os.environ.get("MYSQL_HOST")}:{os.environ.get("MYSQL_PORT")}/{os.environ.get("MYSQL_DB")}'
 db = SQLAlchemy(app)
 
 """
