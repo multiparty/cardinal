@@ -94,10 +94,18 @@ class KubeParty(Party):
         if os.environ.get("CLOUD_PROVIDER") == "AKS":
             storage_acct = os.environ.get("STORAGE_ACCT")
 
+        aws_region = ""
+        if os.environ.get("CLOUD_PROVIDER") == "EKS":
+            aws_region = os.environ.get("REGION")
+            self.app.logger.info("AWS_REGION: \n{}\n".format(aws_region))
+
+        pid = self.workflow_config["PID"]
+
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONG_IMG_PATH": os.environ.get("CONGREGATION"),
             "INFRA": os.environ.get("INFRA"),
+            "PID": f'"{pid}"',
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
             "SOURCE_BUCKET": dataset.source_bucket,
             "SOURCE_KEY": dataset.source_key,
@@ -106,6 +114,7 @@ class KubeParty(Party):
             "PROTOCOL_KEY": workflow.source_key,
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
             "STORAGE_ACCOUNT": storage_acct,
+            "AWS_REGION": aws_region,
             "WORKFLOW_NAME": self.workflow_config['workflow_name'],
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
