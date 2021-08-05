@@ -89,10 +89,23 @@ class KubeParty(Party):
         workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
                                                             self.workflow_config["dataset_id"])
         write_path = dataset.source_key.split("/")[-1]
+
+        storage_acct = ""
+        if os.environ.get("CLOUD_PROVIDER") == "AKS":
+            storage_acct = os.environ.get("STORAGE_ACCT")
+
+        aws_region = ""
+        if os.environ.get("CLOUD_PROVIDER") == "EKS":
+            aws_region = os.environ.get("REGION")
+            self.app.logger.info("AWS_REGION: \n{}\n".format(aws_region))
+
+        pid = self.workflow_config["PID"]
+
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONG_IMG_PATH": os.environ.get("CONGREGATION"),
-            "INFRA": "AWS",
+            "INFRA": os.environ.get("INFRA"),
+            "PID": f'"{pid}"',
             "STORAGE_HANDLER_CONFIG": "/data/curia_config.txt",
             "SOURCE_BUCKET": dataset.source_bucket,
             "SOURCE_KEY": dataset.source_key,
@@ -100,6 +113,9 @@ class KubeParty(Party):
             "PROTOCOL_BUCKET": workflow.source_bucket,
             "PROTOCOL_KEY": workflow.source_key,
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
+            "STORAGE_ACCOUNT": storage_acct,
+            "AWS_REGION": aws_region,
+            "WORKFLOW_NAME": self.workflow_config['workflow_name'],
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
         }
         data_template = open(f"{self.templates_directory}/kube/pod.tmpl", 'r').read()
@@ -138,7 +154,6 @@ class KubeParty(Party):
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
-            "WORKFLOW_NAME": self.workflow_config['workflow_name'],
             "CONG_CONFIG": encoded_config,
             "CURIA_CONFIG": encoded_creds
         }

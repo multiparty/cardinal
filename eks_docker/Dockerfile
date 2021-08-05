@@ -12,8 +12,9 @@ RUN pip install -r requirements.txt
 # Environment information
 ENV PORT=5000
 ENV CLOUD_PROVIDER="EKS"
+ENV INFRA="AWS"
 ENV REGION="us-east-1"
-ENV CONGREGATION="docker.io/hicsail/congregation-jiff:latest"
+ENV CONGREGATION="docker.io/hicsail/congregation-jiff:debug"
 
 # profile flag - set to "true" to receive profiling timestamps with each workflow
 ENV PROFILE="false"

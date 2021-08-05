@@ -17,6 +17,8 @@ spec:
       env:
         - name: INFRA
           value: {{INFRA}}
+        - name: PID
+          value: {{{PID}}}
         - name: STORAGE_HANDLER_CONFIG
           value: {{STORAGE_HANDLER_CONFIG}}
         - name: SOURCE_BUCKET
@@ -31,6 +33,12 @@ spec:
           value: {{PROTOCOL_KEY}}
         - name: DESTINATION_BUCKET
           value: {{DESTINATION_BUCKET}}
+        - name: STORAGE_ACCOUNT
+          value: {{STORAGE_ACCOUNT}}
+        - name: AWS_REGION
+          value: {{AWS_REGION}}
+        - name: WORKFLOW_NAME
+          value: {{WORKFLOW_NAME}}
       volumeMounts:
         - name: data-volume
           mountPath: /data
@@ -43,8 +51,6 @@ spec:
       configMap:
         name: {{CONFIGMAP_NAME}}
         items:
-          - key: workflow
-            path: workflow
           - key: config_encoded
             path: config
           - key: curia_config_encoded
