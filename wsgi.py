@@ -69,7 +69,8 @@ def submit():
             orch.run()
 
             response = {
-                "ID": req["workflow_name"]
+                "ID": req["workflow_name"],
+                "DESTINATION": f's3://{os.getenv("DESTINATION_BUCKET")}/{req["workflow_name"]}.csv'
             }
 
         else:
@@ -82,7 +83,7 @@ def submit():
                 "MSG": f"ERR: Workflow {req['workflow_name']} not present in record of running workflows."
             }
 
-    return jsonify(response)
+        return jsonify(response)
 
 
 @app.route("/api/start_jiff_server", methods=["POST"])
