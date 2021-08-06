@@ -146,23 +146,22 @@ class Party:
         then just grab a file from that location with a .json extension instead of
         .csv, since we ensure it exists when we upload the dataset.
         """
-        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
-                                                            self.workflow_config["dataset_id"])
+
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": f"{str(workflow.fixed_point).lower()}",
+            "USE_FLOATS": self.workflow_config["fixed_point"],
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
-            "ZP": workflow.zp,
-            "FP_USE": f"{str(workflow.fixed_point).lower()}",
-            "FP_DECIMAL": workflow.decimal_digits,
-            "FP_INTEGER": workflow.integer_digits,
-            "NN_USE": f"{str(workflow.negative_number).lower()}",
-            "BN_USE": f"{str(workflow.big_number).lower()}"
+            "ZP": self.workflow_config["zp"],
+            "FP_USE": self.workflow_config["fixed_point"],
+            "FP_DECIMAL": self.workflow_config["decimal_digits"],
+            "FP_INTEGER": self.workflow_config["integer_digits"],
+            "NN_USE": self.workflow_config["negative_number"],
+            "BN_USE": self.workflow_config["big_number"]
         }
         self.app.logger.info(f"Data {data}")
 

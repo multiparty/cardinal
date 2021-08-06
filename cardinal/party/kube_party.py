@@ -85,11 +85,7 @@ class KubeParty(Party):
         # pull dataset info for source bucket and key
         dataset = get_dataset_by_id_and_pid(self.workflow_config['dataset_id'], self.workflow_config['PID'])
 
-        # pull dataset info for source bucket and key of workflow
-        workflow = get_workflow_by_operation_and_dataset_id(self.workflow_config["operation"],
-                                                            self.workflow_config["dataset_id"])
-        write_path = dataset.source_key.split("/")[-1]
-
+        write_path = self.workflow_config["source_key"].split("/")[-1]
         storage_acct = ""
         if os.environ.get("CLOUD_PROVIDER") == "AKS":
             storage_acct = os.environ.get("STORAGE_ACCT")
@@ -110,8 +106,8 @@ class KubeParty(Party):
             "SOURCE_BUCKET": dataset.source_bucket,
             "SOURCE_KEY": dataset.source_key,
             "WRITE_PATH": f"/data/{write_path}",
-            "PROTOCOL_BUCKET": workflow.source_bucket,
-            "PROTOCOL_KEY": workflow.source_key,
+            "PROTOCOL_BUCKET": self.workflow_config["workflow_source_bucket"],
+            "PROTOCOL_KEY": self.workflow_config["workflow_source_key"],
             "DESTINATION_BUCKET": os.environ.get("DESTINATION_BUCKET"),
             "STORAGE_ACCOUNT": storage_acct,
             "AWS_REGION": aws_region,

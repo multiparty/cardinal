@@ -46,12 +46,21 @@ def submit():
         """
         request looks like:
         {
-            "workflow_name": "test-workflow",
-            "dataset_id": "HRI107",
-            "operation": "std-dev",
-            "PID": 1
-            "other_cardinals": [(2, "23.45.67.89"), (3, "34.56.78.90")],
-            "jiff_server": "45.67.89.01"
+            "workflow_name": computation_settings['workflow_name'],
+            "dataset_id": computation_settings['dataset_id'],
+            "operation": computation_settings['operation'],
+            "cardinal_ip": IP,
+            "workflow_source_bucket": computation_settings['workflow_source_bucket'],
+            "workflow_source_key": computation_settings['workflow_source_key'],
+            "PID": PID,
+            "other_cardinals": [x for x in cardinals if not x == (PID, IP)],
+            "jiff_server": jiff_server_IP,
+            "bigNumber": False, 
+            "negativeNumber":False, 
+            "fixedPoint":False, 
+            "integerDigits":0, 
+            "decimalDigits": 0, 
+            "ZP": 16777729
         }
         """
         req = request.get_json(force=True)
