@@ -151,11 +151,22 @@ class KubeParty(Party):
                      'AWS_SECRET_ACCESS_KEY': os.environ.get("AWS_SECRET_ACCESS_KEY")}
         encoded_creds = base64.b64encode(bytes(json.dumps(aws_creds), 'utf-8'))
 
+        post_json_dict = {"workflow_name": self.workflow_config['workflow_name'],
+                          "PID": self.workflow_config['PID'],
+                          "dataset_id": self.workflow_config['dataset_id'],
+                          "operation": self.workflow_config['operation'],
+                          "other_cardinals": self.workflow_config['other_cardinals']}
+        self_ip = self.workflow_config['cardinal_ip']
+        post_request = base64.b64encode(bytes(f'curl -X POST -H "Content-Type: application/json" '
+                                              f'-d \'{json.dumps(post_json_dict)}\' {self_ip}/api/workflow_complete',
+                                              'utf-8'))
+
         params = {
             "POD_NAME": f"{self.spec_prefix}-pod",
             "CONFIGMAP_NAME": f"{self.spec_prefix}-config-map",
             "CONG_CONFIG": encoded_config,
-            "CURIA_CONFIG": encoded_creds
+            "CURIA_CONFIG": encoded_creds,
+            "REQUEST": post_request
         }
         data_template = open(f"{self.templates_directory}/kube/config_map.tmpl", 'r').read()
 
