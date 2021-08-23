@@ -1,6 +1,7 @@
+from time import time
 from sqlalchemy import and_
 
-from cardinal.database import Workflow, Pod, JiffServer, app, Dataset, PodEventTimestamp
+from cardinal.database import Workflow, Pod, JiffServer, app, Dataset, PodEventTimestamp, PodResourceConsumption
 from cardinal.database import db
 
 
@@ -109,10 +110,10 @@ def save_pod_event_timestamp(workflow_name,pid):
 def update_pod_event_timestamp(workflow_name,pid,event,timestamp):
     obj = db.session.query(PodEventTimestamp) \
                 .filter(and_(PodEventTimestamp.workflow_name == workflow_name, PodEventTimestamp.pid == pid)) \
-                .first() 
+                .first()
 
     setattr(obj,event,timestamp)
-    
+
     app.logger.info(f"updating pod time stamp object of pid {pid} - event : {event}")
     db.session.commit()
 
@@ -120,4 +121,16 @@ def get_pod_event_timestamp_by_workflow_and_pid(workflow_name,pid):
     obj = PodEventTimestamp.query.filter(and_(PodEventTimestamp.workflow_name == workflow_name, PodEventTimestamp.pid == pid)).first()
     db.session.commit()
     app.logger.info(f"Pod event timestamps {obj} ")
+    return obj
+
+
+def save_pod_resource_consumption(workflow_name,pid,cpu,memory,timestamp):
+    obj = PodResourceConsumption(workflow_name, pid,cpu,memory,timestamp)
+    db.session.add(obj)
+    db.session.commit()
+
+def get_pod_resource_consumption_by_workflow_and_pid(workflow_name,pid):
+    obj = PodResourceConsumption.query.filter(and_(PodResourceConsumption.workflow_name == workflow_name, PodResourceConsumption.pid == pid)).all()
+    db.session.commit()
+    # app.logger.info(f"Pod resource consumptions {obj} ")
     return obj

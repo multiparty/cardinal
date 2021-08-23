@@ -28,6 +28,7 @@ class Party:
         self.event_timestamps = [] # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
         if os.environ.get('PROFILE') and os.environ.get('PROFILE').lower() == 'true':
             self.PROFILE = True
+            self.pod_succeeded = False
         else:
             self.PROFILE = False
 
@@ -152,16 +153,16 @@ class Party:
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": self.workflow_config["fixed_point"],
+            "USE_FLOATS": self.workflow_config["fixedPoint"],
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
             "ZP": self.workflow_config["zp"],
-            "FP_USE": self.workflow_config["fixed_point"],
-            "FP_DECIMAL": self.workflow_config["decimal_digits"],
-            "FP_INTEGER": self.workflow_config["integer_digits"],
-            "NN_USE": self.workflow_config["negative_number"],
-            "BN_USE": self.workflow_config["big_number"]
+            "FP_USE": self.workflow_config["fixedPoint"],
+            "FP_DECIMAL": self.workflow_config["decimalDigits"],
+            "FP_INTEGER": self.workflow_config["integerDigits"],
+            "NN_USE": self.workflow_config["negativeNumber"],
+            "BN_USE": self.workflow_config["bigNumber"]
         }
         self.app.logger.info(f"Data {data}")
 

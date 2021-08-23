@@ -5,13 +5,14 @@ import os
 import pystache
 import time
 import yaml
-from cardinal.database.queries import get_dataset_by_id_and_pid, get_workflow_by_operation_and_dataset_id
+from cardinal.database.queries import get_dataset_by_id_and_pid, get_workflow_by_operation_and_dataset_id,save_pod_resource_consumption,get_pod_resource_consumption_by_workflow_and_pid
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
 from kubernetes import client as k_client
 from kubernetes import config as k_config
 from kubernetes import watch
 from kubernetes.client.rest import ApiException
+import re
 
 
 class KubeParty(Party):
@@ -22,26 +23,49 @@ class KubeParty(Party):
         k_config.load_incluster_config()
         self.kube_client = k_client.CoreV1Api()
 
+    def watch_pod_succeed(self):
+        w = watch.Watch()
+        try:
+            for event in w.stream(self.kube_client.list_namespaced_pod, _request_timeout=60, namespace="default"):
+                self.app.logger.info(f"New Pod Event: {event['type']}, {event['object'].metadata.name}")
+                if event['object'].metadata.name == f"{self.spec_prefix}-pod" and (event['type'].lower() == 'succeeded' or event['object'].status.phase.lower()=='succeeded'):
+
+                    self.app.logger.info("Pod Succeeded")
+                    self.pod_succeeded = True
+                    self.add_event_dict({
+                        'PID': self.workflow_config['PID'],
+                        'event': 'pod_succeeded',
+                        'time': datetime.datetime.now()
+                    })
+                    w.stop()
+        except ApiException as e:
+            self.app.logger.error("Error watching Service: \n{}\n".format(e))
+
+    def record_pod_consumption(self):
+
+        while(True):
+
+            api = k_client.CustomObjectsApi()
+            res = api.get_namespaced_custom_object("metrics.k8s.io", "v1beta1", "default", "pods", f"{self.spec_prefix}-pod")
+            
+            usage = res['containers'][0]['usage']
+            cpu =  int(re.sub("[^0-9]", "", usage['cpu']))
+            memory = int(re.sub("[^0-9]", "", usage['memory']))
+            if (usage['memory'].lower().endswith('ki')):
+                memory = memory / 1000.0
+            
+            save_pod_resource_consumption(self.workflow_config['workflow_name'],self.workflow_config['PID'],cpu,memory,datetime.datetime.now())
+    
+            if (self.pod_succeeded == True or self.running == False):
+                break
+
     def run(self):
         self.prepare_all()
         self.launch_all()
 
         if self.PROFILE:
-            w = watch.Watch()
-            try:
-                for event in w.stream(self.kube_client.list_namespaced_pod, _request_timeout=60, namespace="default"):
-                    self.app.logger.info(f"New Pod Event: {event['type']}, {event['object'].metadata.name}")
-                    if event['object'].metadata.name == f"{self.spec_prefix}-pod" and (event['type'].lower() == 'succeeded' or event['object'].status.phase.lower()=='succeeded'):
+            self.record_pod_consumption()
 
-                        self.app.logger.info("Pod Succeeded")
-                        self.add_event_dict({
-                            'PID': self.workflow_config['PID'],
-                            'event': 'pod_succeeded',
-                            'time': datetime.datetime.now()
-                        })
-                        w.stop()
-            except ApiException as e:
-                self.app.logger.error("Error watching Service: \n{}\n".format(e))
 
     def start_jiff_server(self):
         pod, service = self.build_jiff_specs()
@@ -85,7 +109,7 @@ class KubeParty(Party):
         # pull dataset info for source bucket and key
         dataset = get_dataset_by_id_and_pid(self.workflow_config['dataset_id'], self.workflow_config['PID'])
 
-        write_path = self.workflow_config["source_key"].split("/")[-1]
+        write_path = dataset.source_key.split("/")[-1]
         storage_acct = ""
         if os.environ.get("CLOUD_PROVIDER") == "AKS":
             storage_acct = os.environ.get("STORAGE_ACCT")
@@ -324,6 +348,12 @@ class KubeParty(Party):
                 self.app.logger.error("Error deleting JIFF Pod: \n{}\n".format(e))
 
         if self.PROFILE:
+            self.add_event_dict({
+                'PID': self.workflow_config['PID'],
+                'event': 'pod_succeeded',
+                'time': datetime.datetime.now()
+            })
+
             self.add_event_dict({
                 'PID': self.workflow_config['PID'],
                 'event': 'workflow_stopped',

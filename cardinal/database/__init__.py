@@ -107,5 +107,23 @@ class PodEventTimestamp(db.Model):
     def __repr__(self):
         return '<Pod id %r>' % self.pid
 
+class PodResourceConsumption(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    workflow_name = db.Column(db.String(1000))
+    pid = db.Column(db.Integer)
+    memory_usage = db.Column(db.Integer)
+    cpu_usage = db.Column(db.Integer)
+    timestamp = db.Column(db.Time)
+
+    def __init__(self, workflow_name, pid,cpu,memory,timestamp):
+        self.workflow_name = workflow_name
+        self.pid = pid
+        self.cpu_usage = cpu
+        self.memory_usage = memory
+        self.timestamp = timestamp
+
+    def __repr__(self):
+        return '<Pod id %r>' % self.pid
+
 db.create_all()
 db.session.commit()
