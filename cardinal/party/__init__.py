@@ -149,20 +149,21 @@ class Party:
         """
 
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
+        self.app.logger.info(f"WORKFLOW INFO: {self.workflow_config}")
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": self.workflow_config["fixedPoint"],
+            "USE_FLOATS": str(self.workflow_config["fixedPoint"]).lower(),
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
             "ZP": self.workflow_config["zp"],
-            "FP_USE": self.workflow_config["fixedPoint"],
+            "FP_USE": str(self.workflow_config["fixedPoint"]).lower(),
             "FP_DECIMAL": self.workflow_config["decimalDigits"],
             "FP_INTEGER": self.workflow_config["integerDigits"],
-            "NN_USE": self.workflow_config["negativeNumber"],
-            "BN_USE": self.workflow_config["bigNumber"]
+            "NN_USE": str(self.workflow_config["negativeNumber"]).lower(),
+            "BN_USE": str(self.workflow_config["bigNumber"]).lower()
         }
         self.app.logger.info(f"Data {data}")
 

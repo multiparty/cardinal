@@ -43,21 +43,31 @@ class KubeParty(Party):
 
     def record_pod_consumption(self):
 
+        max_retries = 15
+        count = 0
+        api = k_client.CustomObjectsApi()
         while(True):
+            try:
+                res = api.get_namespaced_custom_object("metrics.k8s.io", "v1beta1", "default", "pods", f"{self.spec_prefix}-pod")
 
-            api = k_client.CustomObjectsApi()
-            res = api.get_namespaced_custom_object("metrics.k8s.io", "v1beta1", "default", "pods", f"{self.spec_prefix}-pod")
-            
-            usage = res['containers'][0]['usage']
-            cpu =  int(re.sub("[^0-9]", "", usage['cpu']))
-            memory = int(re.sub("[^0-9]", "", usage['memory']))
-            if (usage['memory'].lower().endswith('ki')):
-                memory = memory / 1000.0
-            
-            save_pod_resource_consumption(self.workflow_config['workflow_name'],self.workflow_config['PID'],cpu,memory,datetime.datetime.now())
-    
-            if (self.pod_succeeded == True or self.running == False):
-                break
+                usage = res['containers'][0]['usage']
+                cpu =  int(re.sub("[^0-9]", "", usage['cpu']))
+                memory = int(re.sub("[^0-9]", "", usage['memory']))
+                if (usage['memory'].lower().endswith('ki')):
+                    memory = memory / 1000.0
+
+                save_pod_resource_consumption(self.workflow_config['workflow_name'],self.workflow_config['PID'],cpu,memory,datetime.datetime.now())
+            except ApiException as e:
+                # self.app.logger.error(e.status)
+                # self.app.logger.error(e.reason)
+                # self.app.logger.error(e.body)
+                # self.app.logger.error(e.headers)
+                self.app.logger.error("Error getting Congregation Pod resource consumption: \n{}\n".format(e))
+                if e.status == 404:
+                    count += 1
+                    if count > max_retries:
+                        break
+            time.sleep(2)
 
     def run(self):
         self.prepare_all()
