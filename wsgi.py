@@ -412,7 +412,6 @@ def workflow_complete():
         }
         """
 
-        # TODO ensure only targets its own running jobs
         req = request.get_json(force=True)
 
         pods = get_pod_by_workflow_and_pid(req["workflow_name"], req["PID"])
@@ -435,7 +434,7 @@ def workflow_complete():
                 delete_entry(event_timestamps)
 
             event_timestamps_dict = {x.name: str(getattr(event_timestamps, x.name)) for x in event_timestamps.__table__.columns}
-            
+
             pod_resource_usage = get_pod_resource_consumption_by_workflow_and_pid(req['workflow_name'],req['PID'])
             usage = {}
             if pod_resource_usage is not None:
@@ -457,6 +456,8 @@ def workflow_complete():
                 for obj in pod_resource_usage:
                     delete_entry(obj)
 
+            app.logger.info("ABOUT TO send pod stats")
+            orch.send_pod_stats(usage)
             response = {
                 "MSG": "OK",
                 "timestamps": event_timestamps_dict,

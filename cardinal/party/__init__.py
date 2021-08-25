@@ -180,6 +180,19 @@ class Party:
         """
         pass
 
+    def send_pod_stats(self, pod_stats):
+        endpoint = f'{os.environ.get("CHAMBERLAIN")}/api/running-jobs'
+        payload = {
+            'workflow_name': self.workflow_config['workflow_name'],
+            'cpu_usage': pod_stats['cpu']['avg'],
+            'memory_usage': pod_stats['memory']['avg']
+        }
+        try:
+            self.app.logger.info("Sending pod stats to {} with payload: \n{}\n".format(endpoint, payload))
+            requests.put(endpoint, json=payload)
+        except Exception as e:
+            self.app.logger.error("Error sending pod stats: \n{}\n".format(e))
+
     def add_event_dict(self, event_dict):
         """
         function to add an event to the event timestamps list
