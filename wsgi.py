@@ -457,7 +457,7 @@ def workflow_complete():
                     delete_entry(obj)
 
             app.logger.info("ABOUT TO send pod stats")
-            orch.send_pod_stats(usage)
+            orch.send_pod_stats(usage, event_timestamps_dict)
             response = {
                 "MSG": "OK",
                 "timestamps": event_timestamps_dict,

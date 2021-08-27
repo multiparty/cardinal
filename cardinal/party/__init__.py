@@ -180,13 +180,22 @@ class Party:
         """
         pass
 
-    def send_pod_stats(self, pod_stats):
+    def send_pod_stats(self, pod_stats, timestamps):
         endpoint = f'{os.environ.get("CHAMBERLAIN")}/api/running-jobs'
-        payload = {
-            'workflow_name': self.workflow_config['workflow_name'],
-            'cpu_usage': pod_stats['cpu']['avg'],
-            'memory_usage': pod_stats['memory']['avg']
-        }
+        # only send party 1's timestamp bc only it has the jiff server timestamp
+        if self.workflow_config['PID'] == 1:
+            payload = {
+                'workflow_name': self.workflow_config['workflow_name'],
+                'cpu_usage': pod_stats['cpu']['avg'],
+                'memory_usage': pod_stats['memory']['avg'],
+                'timestamps': timestamps
+            }
+        else:
+            payload = {
+                'workflow_name': self.workflow_config['workflow_name'],
+                'cpu_usage': pod_stats['cpu']['avg'],
+                'memory_usage': pod_stats['memory']['avg'],
+            }
         try:
             self.app.logger.info("Sending pod stats to {} with payload: \n{}\n".format(endpoint, payload))
             requests.put(endpoint, json=payload)
