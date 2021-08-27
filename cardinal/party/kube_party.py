@@ -67,7 +67,7 @@ class KubeParty(Party):
                     count += 1
                     if count > max_retries:
                         break
-            time.sleep(2)
+            time.sleep(3)
 
     def run(self):
         self.prepare_all()

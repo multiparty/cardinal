@@ -48,9 +48,9 @@ class Orchestrator:
     def stop_workflow(self):
         self.party.stop_workflow()
 
-    def send_pod_stats(self, pod_stats):
+    def send_pod_stats(self, pod_stats, timestamps):
         self.app.logger.info("SENDING POD STATS")
-        self.party.send_pod_stats(pod_stats)
+        self.party.send_pod_stats(pod_stats, timestamps)
 
     def update_jiff_server(self, jiff_server):
         self.party.workflow_config['jiff_server'] = jiff_server
