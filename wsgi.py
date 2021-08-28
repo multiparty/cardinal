@@ -8,7 +8,8 @@ from flask_cors import CORS
 from cardinal.database import app
 from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, \
     save_workflow, delete_entry, get_jiff_server_by_workflow, dataset_exists, save_dataset, \
-    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid, save_pod_event_timestamp, get_pod_event_timestamp_by_workflow_and_pid
+    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid, save_pod_event_timestamp, get_pod_event_timestamp_by_workflow_and_pid, \
+    get_pod_resource_consumption_by_workflow_and_pid
 from cardinal import Orchestrator
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -411,7 +412,6 @@ def workflow_complete():
         }
         """
 
-        # TODO ensure only targets its own running jobs
         req = request.get_json(force=True)
 
         pods = get_pod_by_workflow_and_pid(req["workflow_name"], req["PID"])
@@ -435,9 +435,33 @@ def workflow_complete():
 
             event_timestamps_dict = {x.name: str(getattr(event_timestamps, x.name)) for x in event_timestamps.__table__.columns}
 
+            pod_resource_usage = get_pod_resource_consumption_by_workflow_and_pid(req['workflow_name'],req['PID'])
+            usage = {}
+            if pod_resource_usage is not None:
+                cpu_consumptions = [obj.cpu_usage for obj in pod_resource_usage]
+                memory_consumptions = [obj.memory_usage for obj in pod_resource_usage]
+
+                if len(cpu_consumptions) > 0:
+                    usage['cpu'] = {
+                        'avg': sum(cpu_consumptions) / len(cpu_consumptions),
+                        'max': max(cpu_consumptions)
+                    }
+
+                if len(memory_consumptions) > 0:
+                    usage['memory'] = {
+                        'avg': sum(memory_consumptions) / len(memory_consumptions),
+                        'max': max(memory_consumptions)
+                    }
+
+                for obj in pod_resource_usage:
+                    delete_entry(obj)
+
+            app.logger.info("ABOUT TO send pod stats")
+            orch.send_pod_stats(usage, event_timestamps_dict)
             response = {
                 "MSG": "OK",
-                "timestamps": event_timestamps_dict
+                "timestamps": event_timestamps_dict,
+                "resource_consumption": usage
             }
         else:
 

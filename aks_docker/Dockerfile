@@ -18,6 +18,7 @@ ENV RESOURCE_GROUP_NAME="mc_cardinal_cardinal_eastus"
 ENV LOCATION="eastus"
 ENV STORAGE_ACCT="https://curiatest.blob.core.windows.net"
 ENV CONGREGATION="docker.io/hicsail/congregation-jiff:debug"
+ENV CHAMBERLAIN=""
 
 # profile flag - set to "true" to receive profiling timestamps with each workflow
 ENV PROFILE="false"

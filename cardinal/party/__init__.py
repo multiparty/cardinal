@@ -28,6 +28,7 @@ class Party:
         self.event_timestamps = [] # list of dicts of format { 'PID' : ... , 'event' : "...." , 'time': ...}
         if os.environ.get('PROFILE') and os.environ.get('PROFILE').lower() == 'true':
             self.PROFILE = True
+            self.pod_succeeded = False
         else:
             self.PROFILE = False
 
@@ -148,20 +149,21 @@ class Party:
         """
 
         template = open(f"{self.templates_directory}/congregation/congregation_config.tmpl").read()
+        self.app.logger.info(f"WORKFLOW INFO: {self.workflow_config}")
         data = {
             "WORKFLOW_NAME": self.workflow_config["workflow_name"],
             "PID": int(self.workflow_config["PID"]),
             "ALL_PIDS": self._build_all_pids_list(),
-            "USE_FLOATS": self.workflow_config["fixed_point"],
+            "USE_FLOATS": str(self.workflow_config["fixedPoint"]).lower(),
             "PARTIES_CONFIG": self._build_parties_config(),
             "JIFF_SERVER_IP": self.workflow_config["jiff_server"].split(":")[0],
             "JIFF_SERVER_PORT": int(self.workflow_config["jiff_server"].split(":")[1]),
             "ZP": self.workflow_config["zp"],
-            "FP_USE": self.workflow_config["fixed_point"],
-            "FP_DECIMAL": self.workflow_config["decimal_digits"],
-            "FP_INTEGER": self.workflow_config["integer_digits"],
-            "NN_USE": self.workflow_config["negative_number"],
-            "BN_USE": self.workflow_config["big_number"]
+            "FP_USE": str(self.workflow_config["fixedPoint"]).lower(),
+            "FP_DECIMAL": self.workflow_config["decimalDigits"],
+            "FP_INTEGER": self.workflow_config["integerDigits"],
+            "NN_USE": str(self.workflow_config["negativeNumber"]).lower(),
+            "BN_USE": str(self.workflow_config["bigNumber"]).lower()
         }
         self.app.logger.info(f"Data {data}")
 
@@ -177,6 +179,28 @@ class Party:
         Overridden in subclasses
         """
         pass
+
+    def send_pod_stats(self, pod_stats, timestamps):
+        endpoint = f'{os.environ.get("CHAMBERLAIN")}/api/running-jobs'
+        # only send party 1's timestamp bc only it has the jiff server timestamp
+        if self.workflow_config['PID'] == 1:
+            payload = {
+                'workflow_name': self.workflow_config['workflow_name'],
+                'cpu_usage': pod_stats['cpu']['avg'],
+                'memory_usage': pod_stats['memory']['avg'],
+                'timestamps': json.dumps(timestamps)
+            }
+        else:
+            payload = {
+                'workflow_name': self.workflow_config['workflow_name'],
+                'cpu_usage': pod_stats['cpu']['avg'],
+                'memory_usage': pod_stats['memory']['avg'],
+            }
+        try:
+            self.app.logger.info("Sending pod stats to {} with payload: \n{}\n".format(endpoint, payload))
+            requests.put(endpoint, json=payload)
+        except Exception as e:
+            self.app.logger.error("Error sending pod stats: \n{}\n".format(e))
 
     def add_event_dict(self, event_dict):
         """

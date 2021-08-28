@@ -1,5 +1,4 @@
 FROM python:3.7
-
 RUN mkdir /cardinal
 WORKDIR /cardinal
 ADD . /cardinal/
@@ -12,9 +11,11 @@ RUN pip install -r requirements.txt
 # Environment information
 ENV PORT=5000
 ENV CLOUD_PROVIDER="GKE"
-ENV PROJECT="curia-test"
+ENV INFRA="GCP"
+ENV PROJECT="certain-root-298909"
 ENV REGION="us-east1"
-ENV CONGREGATION="docker.io/hicsail/congregation-jiff:latest"
+ENV CONGREGATION="docker.io/hicsail/congregation-jiff:debug"
+ENV CHAMBERLAIN=""
 
 # profile flag - set to "true" to receive profiling timestamps with each workflow
 ENV PROFILE="false"

@@ -48,17 +48,21 @@ class Orchestrator:
     def stop_workflow(self):
         self.party.stop_workflow()
 
+    def send_pod_stats(self, pod_stats, timestamps):
+        self.app.logger.info("SENDING POD STATS")
+        self.party.send_pod_stats(pod_stats, timestamps)
+
     def update_jiff_server(self, jiff_server):
         self.party.workflow_config['jiff_server'] = jiff_server
 
     def add_event_dict(self,event_dict):
         '''
-        funtion to add an event to the event timestamps list 
+        funtion to add an event to the event timestamps list
         params:
-            event_dict: dict of format 
-            { 
-                'PID' : ... , 
-                'event' : "...." , 
+            event_dict: dict of format
+            {
+                'PID' : ... ,
+                'event' : "...." ,
                 'time': ... # time.time()
             }
         '''
