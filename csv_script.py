@@ -29,7 +29,6 @@ class DB:
         except Exception as e:
             print(e)
 
-
     def get_tables_columns(self):
 
         # get table names
@@ -54,7 +53,6 @@ class DB:
             df = pd.read_excel(path)
         else:
             raise Exception('File format not supported')
-
 
         table_name = ""
         # match column names
@@ -81,18 +79,14 @@ class DB:
         records = [tuple(self.convert_datatypes(list(x))) for x in df.to_records(index=False)]
 
         columns_str = '(' + ','.join(df.columns) + ')'
-        identifiers_str = '(' + ','.join(['%s' for _ in self.db_schema[table_name][1:]]) + ')'
+        identifiers_str = '(' + ','.join(['%s' for _ in df.columns]) + ')'
         query = 'INSERT IGNORE INTO ' + self.database_name + '.' + table_name + ' ' + columns_str + ' VALUES ' + identifiers_str
-
 
         cursor = self.conn.cursor()
         cursor.executemany(query,records)
         self.conn.commit()
         cursor.close()
         print('INSERTED SUCCESSFULLY!')
-
-
-
 
 
 if __name__ == "__main__":
