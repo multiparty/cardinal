@@ -4,7 +4,7 @@ import os
 import requests
 import time
 
-from cardinal.database.queries import save_pod, get_ips, workflow_exists, get_workflow_by_operation_and_dataset_id, update_pod_event_timestamp
+from cardinal.database.queries import save_pod, get_ips, workflow_exists, update_pod_event_timestamp
 from cardinal.handlers.handler import Handler
 import datetime
 from cardinal.handlers.handler import Handler

@@ -6,10 +6,9 @@ from flask import request
 from flask import jsonify
 from flask_cors import CORS
 from cardinal.database import app
-from cardinal.database.queries import get_running_workflows, save_pod, save_jiff_server, workflow_exists, \
-    save_workflow, delete_entry, get_jiff_server_by_workflow, dataset_exists, save_dataset, \
-    get_pod_by_workflow_and_pid, get_workflow_by_source_key, get_dataset_by_id_and_pid, save_pod_event_timestamp, get_pod_event_timestamp_by_workflow_and_pid, \
-    get_pod_resource_consumption_by_workflow_and_pid
+from cardinal.database.queries import save_pod, save_jiff_server, workflow_exists, delete_entry, get_running_workflows,\
+    get_jiff_server_by_workflow, dataset_exists, save_dataset, get_pod_by_workflow_and_pid, get_dataset_by_id_and_pid,\
+    save_pod_event_timestamp, get_pod_event_timestamp_by_workflow_and_pid, get_pod_resource_consumption_by_workflow_and_pid
 from cardinal import Orchestrator
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -78,10 +77,15 @@ def submit():
 
             orch.run()
 
-            response = {
-                "ID": req["workflow_name"],
-                "DESTINATION": f's3://{os.getenv("DESTINATION_BUCKET")}/{req["workflow_name"]}.csv'
-            }
+            if req['PID'] == 1:
+                response = {
+                    "ID": req["workflow_name"],
+                    "DESTINATION": f's3://{os.getenv("DESTINATION_BUCKET")}/{req["workflow_name"]}.csv'
+                }
+            else:
+                response = {
+                    "ID": req["workflow_name"]
+                }
 
         else:
             app.logger.error(
@@ -206,59 +210,6 @@ def submit_ip_address():
         return jsonify(response)
 
 
-@app.route("/api/submit_workflow", methods=["POST"])
-def submit_workflow():
-    # Submit a workflow to the database to be used later on a data set
-
-    if request.method == "POST":
-        """
-        request could look like:
-        {
-            "source_key": "HRIO/workflow/std_dev_HRI0.py",   # name of relevant workflow
-            "source_bucket": HRI0, 
-            "operation": stv_dev, 
-            "dataset_id": HRI0, 
-            "big_number": true, 
-            "fixed_point": true, 
-            "decimal_digits": 2, 
-            "integer_digits": 2,
-            "negative_number": 2,
-            "zp: : true
-            
-        }
-        """
-
-        req = request.get_json(force=True)
-        if get_workflow_by_source_key(req["source_key"]) is not None:
-            """
-            Check if the workflow exists and do no insert if it is no unique
-            """
-
-            app.logger.error(
-                f"Error saving workflow, workflow already exists. (Try running workflow complete) "
-            )
-
-            response = {
-                "MSG": f"ERR: Workflow {req['source_key']} already exists."
-            }
-        else:
-
-            app.logger.info(
-                f"Saving workflow {req['source_key']}"
-                f"for workflow {req['source_key']}, but this workflow "
-                f"isn't present in record of running workflows."
-            )
-
-            save_workflow(req['source_key'], req['source_bucket'], req['operation'], req['dataset_id'],
-                          req['big_number'], req['fixed_point'],
-                          req['decimal_digits'], req['integer_digits'], req['negative_number'], req['zp'])
-            response = {
-                "MSG": "OK"
-            }
-
-        return jsonify(response)
-
-
 @app.route("/api/submit_dataset", methods=["POST"])
 def submit_dataset():
     """
@@ -309,19 +260,13 @@ def submit_dataset():
 
 @app.route("/api/delete_dataset", methods=["POST"])
 def delete_dataset():
-    """
-   data = {
-        datasetId = db.Column(db.String(150))
-        PID = db.Column(db.Integer)
-        }
-    """
 
     if request.method == "POST":
         """
         request could look like:
         {
-            "dataset_id": "HRI0",   # name of relevant workflow
-            "pid": 2, 
+            "dataset_id": "HRI0",
+            "PID": 2, 
 
         }
         """
@@ -345,48 +290,7 @@ def delete_dataset():
             )
 
             response = {
-                "MSG": "Error deleting dataset"
-            }
-
-        return jsonify(response)
-
-
-@app.route("/api/delete_workflow", methods=["POST"])
-def delete_workflow():
-    # Submit a workflow to the database to be used later on a data set
-
-    if request.method == "POST":
-        """
-        request could look like:
-        {
-            "source_key": "HRIO/workflow/std_dev_HRI0.py",   # name of relevant workflow
-        }
-        """
-
-        req = request.get_json(force=True)
-        workflow = get_workflow_by_source_key(req["source_key"])
-        if workflow is not None:
-            """
-            Check if the workflow exists and if so then delete
-            """
-            delete_entry(workflow)
-
-            app.logger.info(
-                f"Deleted workflow {req['source_key']}"
-            )
-
-            response = {
-                "MSG": "OK"
-            }
-
-        else:
-
-            app.logger.error(
-                f"Error deleting workflow, workflow does not exist. "
-            )
-
-            response = {
-                "MSG": f"ERR: Workflow {req['source_key']} does not exist."
+                "ERR": "Error deleting dataset"
             }
 
         return jsonify(response)
@@ -476,14 +380,14 @@ def workflow_complete():
         return jsonify(response)
 
 
-@app.route("/api/status", methods=["POST"])
+@app.route("/api/status", methods=["GET"])
 def get_status():
     # TODO tie this in with requests that can fetch the status of the pod from the cluster
     """
     Returns the status of the pod.
     """
 
-    if request.method == "POST":
+    if request.method == "GET":
         """
         request looks like:
         {
@@ -496,9 +400,8 @@ def get_status():
             # TODO fit into database
             # Get the pod by workflow and read the status
             # status = RUNNING_JOBS[req['workflow_name']].get_pod_status()
-            status = ''
             response = {
-                "status": status
+                "status": 'Still running'
             }
         else:
             app.logger.error(
@@ -506,7 +409,7 @@ def get_status():
                 f"but this workflow is not present in running jobs"
                 f"record. Nothing to do.")
             response = {
-                "MSG": f"ERR: {req['workflow_name']} not in running jobs record."
+                "status": "Not running"
             }
 
         return jsonify(response)

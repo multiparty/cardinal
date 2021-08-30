@@ -5,7 +5,7 @@ import os
 import pystache
 import time
 import yaml
-from cardinal.database.queries import get_dataset_by_id_and_pid, get_workflow_by_operation_and_dataset_id,save_pod_resource_consumption,get_pod_resource_consumption_by_workflow_and_pid
+from cardinal.database.queries import get_dataset_by_id_and_pid, save_pod_resource_consumption, get_pod_resource_consumption_by_workflow_and_pid
 from cardinal.party import Party
 from cardinal.handlers.kube import KubeHandler
 from kubernetes import client as k_client
@@ -46,12 +46,12 @@ class KubeParty(Party):
         max_retries = 15
         count = 0
         api = k_client.CustomObjectsApi()
-        while(True):
+        while True:
             try:
                 res = api.get_namespaced_custom_object("metrics.k8s.io", "v1beta1", "default", "pods", f"{self.spec_prefix}-pod")
 
                 usage = res['containers'][0]['usage']
-                cpu =  int(re.sub("[^0-9]", "", usage['cpu']))
+                cpu = int(re.sub("[^0-9]", "", usage['cpu']))
                 memory = int(re.sub("[^0-9]", "", usage['memory']))
                 if (usage['memory'].lower().endswith('ki')):
                     memory = memory / 1000.0
