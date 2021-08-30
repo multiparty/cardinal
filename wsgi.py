@@ -436,7 +436,7 @@ def workflow_complete():
             event_timestamps_dict = {x.name: str(getattr(event_timestamps, x.name)) for x in event_timestamps.__table__.columns}
 
             pod_resource_usage = get_pod_resource_consumption_by_workflow_and_pid(req['workflow_name'],req['PID'])
-            usage = {}
+            usage = {'cpu': {'avg': None, 'max': None}, 'memory': {'avg': None, 'max': None}}
             if pod_resource_usage is not None:
                 cpu_consumptions = [obj.cpu_usage for obj in pod_resource_usage]
                 memory_consumptions = [obj.memory_usage for obj in pod_resource_usage]
