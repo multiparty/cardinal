@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{POD_NAME}}
+  labels:
+    app: {{POD_NAME}}
+spec:
+  containers:
+    - name: {{POD_NAME}}
+      image: {{CONG_IMG_PATH}}
+      imagePullPolicy: Always
+      ports:
+        - containerPort: 9000
+          protocol: TCP
+        - containerPort: 9001
+          protocol: TCP
+      env:
+        - name: INFRA
+          value: {{INFRA}}
+        - name: PID
+          value: {{{PID}}}
+        - name: STORAGE_HANDLER_CONFIG
+          value: {{STORAGE_HANDLER_CONFIG}}
+        - name: SOURCE_BUCKET
+          value: {{SOURCE_BUCKET}}
+        - name: SOURCE_KEY
+          value: {{SOURCE_KEY}}
+        - name: WRITE_PATH
+          value: {{WRITE_PATH}}
+        - name: PROTOCOL_BUCKET
+          value: {{PROTOCOL_BUCKET}}
+        - name: PROTOCOL_KEY
+          value: {{PROTOCOL_KEY}}
+        - name: DESTINATION_BUCKET
+          value: {{DESTINATION_BUCKET}}
+        - name: STORAGE_ACCOUNT
+          value: {{STORAGE_ACCOUNT}}
+        - name: AWS_REGION
+          value: {{AWS_REGION}}
+        - name: WORKFLOW_NAME
+          value: {{WORKFLOW_NAME}}
+      volumeMounts:
+        - name: data-volume
+          mountPath: /data
+        - name: cong-config
+          mountPath: /config
+  volumes:
+    - name: data-volume
+      emptyDir:  {}
+    - name: cong-config
+      configMap:
+        name: {{CONFIGMAP_NAME}}
+        items:
+          - key: config_encoded
+            path: config
+          - key: curia_config_encoded
+            path: curia_config
+          - key: request_encoded
+            path: request
+  restartPolicy: OnFailure

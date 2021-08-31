@@ -17,8 +17,8 @@ TODO:
 
 
 class VmParty(Party):
-    def __init__(self, workflow_config: dict, app, handler: VmHandler):
-        super(VmParty, self).__init__(workflow_config, app, handler)
+    def __init__(self, workflow_config: dict, app, handler: VmHandler, num_workflows: int):
+        super(VmParty, self).__init__(workflow_config, app, handler, num_workflows)
 
     def run(self):
         self._exchange_ips()

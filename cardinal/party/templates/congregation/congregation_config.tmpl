@@ -3,17 +3,17 @@
     "workflow_name": "{{{WORKFLOW_NAME}}}",
     "pid": {{{PID}}},
     "all_pids": {{{ALL_PIDS}}},
-    "data_path": "/data/",
-    "code_path": "/code/",
+    "data_path": "/data",
+    "code_path": "/code",
     "delimiter": ",",
     "use_floats": {{{USE_FLOATS}}}
   },
   "network": {
-    "parties":
-{{{PARTIES_CONFIG}}}
+    "parties": {{{PARTIES_CONFIG}}}
   },
   "jiff": {
-    "jiff_lib_path": "/dev/jiff/",
+    "jiff_lib_path": "/app/jiff",
+    "server_pid": null,
     "server_ip": "{{{JIFF_SERVER_IP}}}",
     "server_port": {{{JIFF_SERVER_PORT}}},
     "zp": {{{ZP}}},
